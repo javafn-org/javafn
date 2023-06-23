@@ -1,0 +1,32 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+group = 'org.javafn'
+version = "${major}.${minor}.${patch}"
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation('junit:junit:4.13.1')
+}
+
+publishing {
+    publications {
+        library(MavenPublication) {
+            from components.java
+        }
+    }
+}
