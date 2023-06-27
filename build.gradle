@@ -95,9 +95,8 @@ publishing {
 signing {
     useGpgCmd()
     project.ext.set('signing.gnupg.executable', 'gpg')
-    project.ext.set('signing.gnupg.keyName', System.getenv("OSSRG_GPG_ID"))
+    project.ext.set('signing.gnupg.keyName', System.getenv("OSSRH_GPG_ID"))
     project.ext.set('signing.gnupg.passphrase', System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD"))
-    println(project.properties['signing.gnupg.passphrase'])
     sign publishing.publications.javafn
 }
 
