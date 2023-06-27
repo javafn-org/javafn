@@ -1,6 +1,7 @@
 plugins {
     id 'java-library'
     id 'maven-publish'
+    id 'signing'
 }
 
 sourceCompatibility = JavaVersion.VERSION_1_8
@@ -16,6 +17,8 @@ java {
 
 repositories {
     mavenLocal()
+
+
     mavenCentral()
 }
 
@@ -25,8 +28,68 @@ dependencies {
 
 publishing {
     publications {
-        library(MavenPublication) {
+        javafn(MavenPublication) {
+            groupId = group
+            artifactId = name
+            version = version
+
+            pom {
+                name = 'JavaFn'
+                description = 'Additional functional tools for Java'
+                url = 'https://github.com/javafn-org/javafn'
+                scm {
+                    connection = 'scm:git:git://github.com:javafn-org/javafn.git'
+                    developerConnection = 'scm:git:ssh://git@github.com:javafn-org/javafn.git'
+                    url = 'https://github.com/javafn-org/javafn'
+                }
+                licenses {
+                    license {
+                        name = 'BSD-3-Clause'
+                        url = 'https://opensource.org/license/BSD-3-clause/'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'ben-stringer'
+                        name = 'Ben Stringer'
+                        email = 'ben.stringer.jr@javafn.org'
+                    }
+                    developer {
+                        id = 'Archthebald'
+                        name = 'Dakota Maulding'
+                        email = ''
+                    }
+                    developer {
+                        id = 'TrevorPatorno'
+                        name = 'Trevor Patorno'
+                        email = ''
+                    }
+                    developer {
+                        id = 'nichipedia'
+                        name = 'Nicholas Moran'
+                        email = ''
+                    }
+                }
+            }
+
             from components.java
         }
     }
+    repositories {
+        maven {
+            // https://dev.to/kengotoda/deploying-to-ossrh-with-gradle-in-2020-1lhi
+
+            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            // Snapshot
+            // url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+            credentials {
+                username = ossrhUsername
+                password = ossrhPassword
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.javafn
 }
