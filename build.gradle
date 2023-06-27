@@ -93,8 +93,14 @@ publishing {
 }
 
 signing {
-    afterEvaluate { project ->
-        required { System.getenv().containsKey("CI") }
-        sign publishing.publications.javafn
-    }
+    useGpgCmd()
+    project.ext.set('signing.gnupg.executable', 'gpg')
+    project.ext.set('signing.gnupg.keyName', System.getenv("OSSRG_GPG_ID"))
+    project.ext.set('signing.gnupg.passphrase', System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD"))
+    println(project.properties['signing.gnupg.passphrase'])
+    sign publishing.publications.javafn
+}
+
+tasks.withType(Sign) {
+    onlyIf { System.getenv().containsKey("CI") }
 }
