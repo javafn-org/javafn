@@ -77,19 +77,24 @@ publishing {
     }
     repositories {
         maven {
+            // The official documentation on sonatype.org does not use modern gradle.
+            // I based this configuration from the following
             // https://dev.to/kengotoda/deploying-to-ossrh-with-gradle-in-2020-1lhi
 
-            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            // Snapshot
-            // url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+             url = version.endsWith("-SNAPSHOT")
+                     ? "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                     : "https://s01.oss.sonatype.org/content/repositories/snapshots/"
             credentials {
-                username = ossrhUsername
-                password = ossrhPassword
+                username = System.getenv('MAVEN_USERNAME')
+                password = System.getenv('MAVEN_PASSWORD')
             }
         }
     }
 }
 
 signing {
-    sign publishing.publications.javafn
+    afterEvaluate { project ->
+        required { System.getenv().containsKey("CI") }
+        sign publishing.publications.javafn
+    }
 }
