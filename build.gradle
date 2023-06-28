@@ -82,8 +82,8 @@ publishing {
             // https://dev.to/kengotoda/deploying-to-ossrh-with-gradle-in-2020-1lhi
 
              url = version.endsWith("-SNAPSHOT")
-                     ? "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-                     : "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                     ? "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                     : "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
             credentials {
                 username = System.getenv('MAVEN_USERNAME')
                 password = System.getenv('MAVEN_PASSWORD')
