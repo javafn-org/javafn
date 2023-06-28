@@ -35,7 +35,13 @@ publishing {
 
             pom {
                 name = 'JavaFn'
-                description = 'Additional functional tools for Java'
+                description = '''\
+                    |Additional functional tools for Java.
+                    |Adds support for Result and Either algebraic types.
+                    |Includes a set of static Try methods that return Results so that checked exceptions
+                    |can be used in streams seamlessly.
+                    |Finally, includes Pair, Trio, and Quad tuples that work well with streams.
+                    |'''.stripMargin().replaceAll("\n", " ")
                 url = 'https://github.com/javafn-org/javafn'
                 scm {
                     connection = 'scm:git:git://github.com:javafn-org/javafn.git'
