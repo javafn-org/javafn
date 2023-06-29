@@ -37,12 +37,12 @@ The syntax and usage of the Result class is heavily inspired by Rust's Result ty
 
 `java(fn)` also includes an `Either` class with many similar features.  The distinction is about semantics.  To a new Java developer unfamiliar with Haskell, "Result" conveys more meaning then "Either", and "asErr"/"asOk" is more intuitive than "asLeft"/"asRight".  `Either` is included because sometimes you don't want to apply "err/ok" semantics.  Rather you want to convey that a piece of data may be represented in one of two types, both equally valid.
 
-Rust has the `?` operator, for which there is no java equivilent.
+Sometimes you don't want to build a long pipeline.  If you get an error from an intermediate function, you want to return it immediately and proceed with the rest of your code.  Rust has the `?` operator, for which there is no java equivilent.
 
 ```rust
 fn do_thing() -> Result<OkType, ErrType> {
   let intermediate = get_intermediate()?
-  Ok(intermediate.toOkType())
+  Ok(intermediate.genOkType())
 }
 ```
 
@@ -56,12 +56,25 @@ public Result<ErrType, OkType> do_thing() {
     if (res.isErr) return res.asErr().into();
     intermediate = res.asOk().get();
   }
-  return Result.ok(intermediate.toOkType());
+  return Result.ok(intermediate.genOkType());
 ```
 
-Notice that we handle the intermediate result in a scope block so the variable `res` lives a short life.  If the result is an error, we want to return it, but the type is not correct.  We have a `Result<ErrType, Foo>` but we want a `Result<ErrType, OkType>`, and the `into()` function on the error projection allows us to safely change the signature.  Otherwise, we get the intermediate result and begin using it.
+Notice that we handle the intermediate result in a scope block so the variable `res` lives a short life.  If the result is an error, we want to return it, but the type is not correct.  We have a `Result<ErrType, Foo>` but we need a `Result<ErrType, OkType>`, and the `into()` function on the error projection allows us to safely change the signature.  If the result is an ok, we get the intermediate result, assign it outside of the scope block and proceed to use it.  Unfortunately, there's no way to get around storing the result in a variable because there's no way to conditionally return in a single statement.
 
-The `Try` class can be used in streams to perform an operation that would normally throw an exception (which is not allowed in streams) and returns a `Result` instead.
+The `Try` class can be used in streams to perform an operation that would normally throw an exception (which is not allowed in streams) and returns a `Result` instead.  In the following example, `sum` will be `-1` if there are _any_ errors.  Otherwise, it will be the sum of all the user-supplied numbers.
+
+```java
+final List<String> userSuppliedNumbers = ...;
+final long sum = userSuppliedNumbers.stream()      // Stream<String>
+        .map(Try.Map(Long::parseLong))             // Stream<Result<Exception, Long>>
+        .map(Ok.MapToLong(i -> i))                 // Stream<LongResult<Exception>>
+        .collect(LongResult.collector())           // LongResultCollection<Exception>
+        .fold()                                    // LongResult<List<Exception>>
+        .reduce(
+                errs -> -1L,
+                oks -> Arrays.stream(oks).sum()
+        );
+```
 
 ## Tuples
 
@@ -105,6 +118,24 @@ The `Trio` and `Quad` classes are similar to `Pair` but are not documented so we
 
 Another feature of the tuples is the ability to create chunks and sliding windows over arrays.
 
+## Using
+
+Simply include the dependency in your build tool, for example, using maven
+
+```xml
+<dependency>
+    <groupId>org.javafn</groupId>
+    <artifactId>javafn</artifactId>
+    <version>1.0.1</version>
+</dependency>
+```
+
+or gradle
+
+```gradle
+implementation 'org.javafn:javafn:1.0.1'
+```
+
 ## Compatibility
 
 This library is in use in several production projects that are frozen at Java 8 until RedHat drops support in favor of a newer Java version.  Therefore, this library must always be bytecode compatible with Java 8.  It should support newer versions with no modifications (I have used it for small projects using Java 17, but have done no major testing).  
@@ -112,3 +143,4 @@ This library is in use in several production projects that are frozen at Java 8 
 ## Contact
 
 By email `org.javafn`at`javafn.org`
+
