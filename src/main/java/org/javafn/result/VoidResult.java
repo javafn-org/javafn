@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -271,9 +273,16 @@ public abstract class VoidResult<ERR> {
 
 	public abstract <NEWERR, NEWOK> Result<NEWERR, NEWOK> mapResult(
 			Function<ERR, NEWERR> fnErr, Supplier<NEWOK> fnOk);
+	public static <E, NEWERR, NEWOK> Function<VoidResult<E>, Result<NEWERR, NEWOK>> MapResult(
+			final Function<E, NEWERR> fnErr, final Supplier<NEWOK> fnOk)
+	{ return res -> res.mapResult(fnErr, fnOk); }
 	public abstract VoidResult<ERR> peek(Consumer<ERR> fnErr, Runnable fnOk);
+	public static <E> Function<VoidResult<E>, VoidResult<E>> Peek(Consumer<E> fnErr, Runnable fnOk)
+	{ return res -> res.peek(fnErr, fnOk); }
 
 	public abstract <T> T reduce(Function<ERR, T> fnErr, Supplier<T> fnOk);
+	public static <E, T> Function<VoidResult<E>, T> Reduce(final Function<E, T> fnErr, final Supplier<T> fnOk)
+	{ return res -> res.reduce(fnErr, fnOk); }
 
 	public List<VoidResult<ERR>> list() { return Collections.singletonList(this); }
 

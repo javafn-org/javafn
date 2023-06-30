@@ -306,9 +306,16 @@ public abstract class DoubleResult<ERR> {
 
 	public abstract <NEWERR, NEWOK> Result<NEWERR, NEWOK> mapResult(
 			Function<ERR, NEWERR> fnErr, DoubleFunction<NEWOK> fnOk);
+	public static <E, NEWERR, NEWOK> Function<DoubleResult<E>, Result<NEWERR, NEWOK>> MapResult(
+			final Function<E, NEWERR> fnErr, final DoubleFunction<NEWOK> fnOk)
+	{ return res -> res.mapResult(fnErr, fnOk); }
 	public abstract DoubleResult<ERR> peek(Consumer<ERR> fnErr, DoubleConsumer fnOk);
+	public static <E> Function<DoubleResult<E>, DoubleResult<E>> Peek(Consumer<E> fnErr, DoubleConsumer fnOk)
+	{ return res -> res.peek(fnErr, fnOk); }
 
 	public abstract <T> T reduce(Function<ERR, T> fnErr, DoubleFunction<T> fnOk);
+	public static <E, T> Function<DoubleResult<E>, T> Reduce(final Function<E, T> fnErr, final DoubleFunction<T> fnOk)
+	{ return res -> res.reduce(fnErr, fnOk); }
 
 	public List<DoubleResult<ERR>> list() { return Collections.singletonList(this); }
 

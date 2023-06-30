@@ -765,6 +765,12 @@ public abstract class Result<ERR, OK> {
      * Result<String, UUID> res1 = Result.okOrElse(maybeGetId(), () -> "Could not get id.");
      * Result<UUID, String> res2 = res1.swap();
      * }</pre>
+     * Can be supplied directly in a stream
+     * <pre>{@code
+     * someStreamOfResults
+     *          .map(Result::swap)
+     *          .forEach(...);
+     * }</pre>
      */
     public abstract Result<OK, ERR> swap();
 
@@ -782,6 +788,23 @@ public abstract class Result<ERR, OK> {
             Function<ERR, NEWERR> fnErr, Function<OK, NEWOK> fnOk);
 
     /**
+     * Return a function that will accept a result and execute the appropriate mapping function for the supplied Result
+     * type and return a new Result with the same projection.
+     * <pre>{@code
+     * Result<String, UUID> res1 = Result.okOrElse(maybeGetId(), () -> "Could not get id.");
+     * Result<Integer, long[]> res2 = res1.mapResult(
+     * someStreamOfResults
+     *     .map(Result.MapResult(
+     *             msg -> toStatusCode(msg),
+     *             uuid -> { id.getMostSignificantBits(), id.getLeastSignificantBits() }))
+     *     .forEach(...);
+     * }</pre>
+     */
+    public static <E, O, NEWERR, NEWOK> Function<Result<E, O>, Result<NEWERR, NEWOK>> MapResult(
+            final Function<E, NEWERR> fnErr, final Function<O, NEWOK> fnOk)
+    { return res -> res.mapResult(fnErr, fnOk); }
+
+    /**
      * Execute the appropriate consumer for this Result type and return this Result for chaining
      * <pre>{@code
      * Result<Void, Void> res = doSomeOperation();
@@ -792,6 +815,19 @@ public abstract class Result<ERR, OK> {
      * }</pre>
      */
     public abstract Result<ERR, OK> peek(Consumer<ERR> fnErr, Consumer<OK> fnOk);
+
+    /**
+     * Return a function that will accept a result and execute the appropriate consumer for the supplied Result
+     * and return this Result for chaining
+     * <pre>{@code
+     * someStreamOfResults
+     *      .peek(Result.Peek(
+     *              err -> System.out.println("This will only print if the result is an err."),
+     *              ok -> System.out.println("This will only print if the result is an ok.")));
+     * }</pre>
+     */
+    public static <E, O> Function<Result<E, O>, Result<E, O>> Peek(Consumer<E> fnErr, Consumer<O> fnOk)
+    { return res -> res.peek(fnErr, fnOk); }
 
     /**
      * Execute the appropriate function for this Result type and return the generated value.
@@ -806,6 +842,20 @@ public abstract class Result<ERR, OK> {
      * @return the value of type T produced by the appropriate function depending on this Result's variant
      */
     public abstract <T> T reduce(Function<ERR, T> fnErr, Function<OK, T> fnOk);
+
+    /**
+     * Return a function that will accept a result and execute the appropriate function and return the generated value.
+     * This function is intended to be used in a stream to avoid naming the result variable.
+     * <pre>{@code
+     * someStreamOfResults
+     *      .map(Result.Reduce(
+     *              err -> "This was an err",
+     *              ok -> "This was an ok"))
+     *      .foreach(System.out::println);
+     * }</pre>
+     */
+    public static <E, O, T> Function<Result<E, O>, T> Reduce(final Function<E, T> fnErr, final Function<O, T> fnOk)
+    { return res -> res.reduce(fnErr, fnOk); }
 
     /**
      * Wrap this result in a list.  No guarantees are made regarding the type, thread safety, or mutability

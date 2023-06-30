@@ -1,5 +1,7 @@
 package org.javafn.result;
 
+import org.javafn.either.Either;
+import org.javafn.either.Either.Right;
 import org.javafn.result.Result.Err;
 import org.javafn.result.Result.Ok;
 import org.junit.Test;

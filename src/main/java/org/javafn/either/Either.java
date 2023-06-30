@@ -472,7 +472,7 @@ public abstract class Either<LEFT, RIGHT> {
     public abstract Right<LEFT, RIGHT> asRight();
 
     /**
-     * Transpose the types of this Either and convert from a Left to a Right or vice versa
+     * Transpose the types of this Either and convert from a Left to a Right or vice versa.
      */
     public abstract Either<RIGHT, LEFT> swap();
 
@@ -480,15 +480,26 @@ public abstract class Either<LEFT, RIGHT> {
      * Execute the appropriate mapping function for this Either type and return a new Either with the same projection
      */
     public abstract <ML, MR> Either<ML, MR> mapEither(Function<LEFT, ML> fnLeft, Function<RIGHT, MR> fnRight);
+
+    public static <L, R, ML, MR> Function<Either<L, R>, Either<ML, MR>> MapEither(
+            final Function<L, ML> fnLeft, final Function<R, MR> fnRight)
+    { return either -> either.mapEither(fnLeft, fnRight); }
+
     /**
      * Execute the appropriate consumer for this Either type and return this Either for chaining
      */
     public abstract Either<LEFT, RIGHT> forEither(Consumer<LEFT> fnLeft, Consumer<RIGHT> fnRight);
 
+    public static <L, R> Function<Either<L, R>, Either<L, R>> ForEither(final Consumer<L> fnLeft, final Consumer<R> fnRight)
+    { return either -> either.forEither(fnLeft, fnRight); }
+
     /**
      * Execute the appropriate function for this Either type and return the generated value
      */
     public abstract <T> T reduce(Function<LEFT, T> fnLeft, Function<RIGHT, T> fnRight);
+
+    public static <L, R, T> Function<Either<L, R>, T> Reduce(final Function<L, T> fnLeft, final Function<R, T> fnRight)
+    { return either -> either.reduce(fnLeft, fnRight); }
 
     /**
      * In Scala terminology, a 'sealed' class is one that has been subclassed, but no additional subclasses can

@@ -11,6 +11,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
+import java.util.function.DoubleConsumer;
+import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntFunction;
@@ -305,9 +307,16 @@ public abstract class IntResult<ERR> {
 
 	public abstract <NEWERR, NEWOK> Result<NEWERR, NEWOK> mapResult(
 			Function<ERR, NEWERR> fnErr, IntFunction<NEWOK> fnOk);
+	public static <E, NEWERR, NEWOK> Function<IntResult<E>, Result<NEWERR, NEWOK>> MapResult(
+			final Function<E, NEWERR> fnErr, final IntFunction<NEWOK> fnOk)
+	{ return res -> res.mapResult(fnErr, fnOk); }
 	public abstract IntResult<ERR> peek(Consumer<ERR> fnErr, IntConsumer fnOk);
+	public static <E> Function<IntResult<E>, IntResult<E>> Peek(Consumer<E> fnErr, IntConsumer fnOk)
+	{ return res -> res.peek(fnErr, fnOk); }
 
 	public abstract <T> T reduce(Function<ERR, T> fnErr, IntFunction<T> fnOk);
+	public static <E, T> Function<IntResult<E>, T> Reduce(final Function<E, T> fnErr, final IntFunction<T> fnOk)
+	{ return res -> res.reduce(fnErr, fnOk); }
 
 	public List<IntResult<ERR>> list() { return Collections.singletonList(this); }
 
