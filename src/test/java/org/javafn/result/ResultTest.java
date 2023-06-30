@@ -4,6 +4,8 @@ import org.javafn.result.Result.Err;
 import org.javafn.result.Result.Ok;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -282,5 +284,39 @@ public class ResultTest {
             assertEquals("Expected the ok value to be the specific uuid from the source.",
                     values.get(i), e.asOk().get());
         }
+    }
+
+    @Test public void testErrList() {
+        final Result<List<String>, Void> empty = Result.errList();
+        final Result<List<String>, Void> one = Result.errList("one");
+        final Result<List<String>, Void> two = Result.errList("one", "two");
+        final Result<List<String>, Void> three = Result.errList("one", "two", "three");
+        assertTrue("Expected all errList values to be err types.",
+                empty.isErr && one.isErr && two.isErr && three.isErr);
+        assertEquals("Expecting the empty varargs call to return an empty list",
+                Collections.emptyList(), empty.asErr().get());
+        assertEquals("Expecting the single varargs call to return a singleton list",
+                Collections.singletonList("one"), one.asErr().get());
+        assertEquals("Expecting the two varargs call to return a list with two elements",
+                Arrays.asList("one", "two"), two.asErr().get());
+        assertEquals("Expecting the three varargs call to return a list with three elements",
+                Arrays.asList("one", "two", "three"), three.asErr().get());
+    }
+
+    @Test public void testOkList() {
+        final Result<Void, List<String>> empty = Result.okList();
+        final Result<Void, List<String>> one = Result.okList("one");
+        final Result<Void, List<String>> two = Result.okList("one", "two");
+        final Result<Void, List<String>> three = Result.okList("one", "two", "three");
+        assertTrue("Expected all okList values to be ok types.",
+                empty.isOk && one.isOk && two.isOk && three.isOk);
+        assertEquals("Expecting the empty varargs call to return an empty list",
+                Collections.emptyList(), empty.asOk().get());
+        assertEquals("Expecting the single varargs call to return a singleton list",
+                Collections.singletonList("one"), one.asOk().get());
+        assertEquals("Expecting the two varargs call to return a list with two elements",
+                Arrays.asList("one", "two"), two.asOk().get());
+        assertEquals("Expecting the three varargs call to return a list with three elements",
+                Arrays.asList("one", "two", "three"), three.asOk().get());
     }
 }

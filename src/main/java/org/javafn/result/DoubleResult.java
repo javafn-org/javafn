@@ -2,7 +2,9 @@ package org.javafn.result;
 
 
 import org.javafn.result.DoubleResultCollection.DoubleResultCollector;
+import org.javafn.result.Result.ErrProjection;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -281,16 +283,12 @@ public abstract class DoubleResult<ERR> {
 		}
 	}
 
-	/**
-	 * Construct a new Err Result with the supplied value.
-	 * <pre>{@code
-	 * final Result<String, UUID> res = Result.err("The supplied id is not a valid UUID");
-	 * }</pre>
-	 * @param err The error value from which a Result will be created
-	 * @return a new err variant Result
-	 */
 	public static <EE> ErrProjection<EE> err(final EE err)
 	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, err); }
+
+	@SafeVarargs
+	public static <EE, OO> ErrProjection<List<EE>> errList(final EE... errs)
+	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, Arrays.asList(errs)); }
 
 	public static <EE> OkProjection<EE> ok(final double ok)
 	{ return new OkProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, ok); }

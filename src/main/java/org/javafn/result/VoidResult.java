@@ -1,7 +1,9 @@
 package org.javafn.result;
 
+import org.javafn.result.Result.ErrProjection;
 import org.javafn.result.VoidResultCollection.VoidResultCollector;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -244,6 +246,10 @@ public abstract class VoidResult<ERR> {
 
 	public static <EE> ErrProjection<EE> err(final EE err)
 	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, err); }
+
+	@SafeVarargs
+	public static <EE, OO> ErrProjection<List<EE>> errList(final EE... errs)
+	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, Arrays.asList(errs)); }
 
 	public static <EE> OkProjection<EE> ok() {
 		@SuppressWarnings("unchecked")

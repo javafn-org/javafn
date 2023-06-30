@@ -3,6 +3,7 @@ package org.javafn.result;
 import org.javafn.either.Either;
 import org.javafn.result.ResultCollection.ResultCollector;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -685,6 +686,24 @@ public abstract class Result<ERR, OK> {
     { return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, err); }
 
     /**
+     * Construct a new Err Result whose type is a list of error values.
+     * This is useful for APIs that allow for a number of error conditions, but only one is generated,
+     * or a handful are generated in one call.  The supplied values are forwarded to {@link Arrays#asList(Object[])}.
+     * <pre>{@code
+     * final Result<List<String>, UUID> res = Result.errList(
+     *         "The supplied uuid is not the right length",
+     *         "The supplied uuid includes invalid characters");
+     * }</pre>
+     * If no arguments are supplied, the result will be an Err type wrapping an empty list, as if calling
+     * <pre>{@code
+     * final Result<List<String>, UUID> res = Result.err(Collections.emptyList());
+     * }</pre>
+     */
+    @SafeVarargs
+    public static <EE, OO> ErrProjection<List<EE>, OO> errList(final EE... errs)
+    { return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, Arrays.asList(errs)); }
+
+    /**
      * Construct a new Ok Result with the supplied value.
      * <pre>{@code
      * final Result<String, UUID> res = Result.ok(UUID.randomUUID());
@@ -694,6 +713,10 @@ public abstract class Result<ERR, OK> {
      */
     public static <EE, OO> OkProjection<EE, OO> ok(final OO ok)
     { return new OkProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, ok); }
+
+    @SafeVarargs
+    public static <EE, OO> OkProjection<EE, List<OO>> okList(final OO... oks)
+    { return new OkProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, Arrays.asList(oks)); }
 
     /**
      * Construct a new Ok Result from the supplied optional if present, or an Err Result
