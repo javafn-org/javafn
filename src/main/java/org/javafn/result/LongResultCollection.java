@@ -171,6 +171,9 @@ public class LongResultCollection<E> {
 				oks.length == 0 ? Optional.empty() : Optional.of(fnOk.apply(oks)));
 	}
 
+	public <R> R reduce(final BiFunction<List<E>, long[], R> fn)
+	{ return fn.apply(errs, oks); }
+
 	public static final class LongResultCollector<EE>
 			implements Collector<LongResult<EE>, LongResultCollectorBuilder<EE>, LongResultCollection<EE>> {
 		@Override public Supplier<LongResultCollectorBuilder<EE>> supplier () { return LongResultCollectorBuilder::new; }

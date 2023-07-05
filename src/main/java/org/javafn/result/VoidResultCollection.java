@@ -154,6 +154,10 @@ public class VoidResultCollection<E> {
 				errs.isEmpty() ? Optional.empty() : Optional.of(fnErr.apply(errs)),
 				numOks == 0 ? Optional.empty() : Optional.of(fnOk.apply(numOks)));
 	}
+
+	public <R> R reduce(final BiFunction<List<E>, Integer, R> fn)
+	{ return fn.apply(errs, numOks); }
+
 	public static final class VoidResultCollector<EE>
 			implements Collector<VoidResult<EE>, VoidResultCollectionBuilder<EE>, VoidResultCollection<EE>> {
 		@Override public Supplier<VoidResultCollectionBuilder<EE>> supplier () { return VoidResultCollectionBuilder::new; }

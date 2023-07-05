@@ -387,8 +387,9 @@ public final class ResultCollection<E, O> {
 	 * returns a Result.ok with all of the ok values mapped to a different type.
 	 * Similarly compare this with the {@link ResultCollection#reduce(Function, Function)} method which maps the
 	 * errs if they exist and drops the oks, or maps the oks otherwise.
-	 * The notable difference with this function is that the mapped types can be combined.
-	 * This is the only reduction method that does not drop the ok values if errors are present.
+	 * The notable difference with this function is that the err and ok types can be combined.
+	 * Finally, compare this with the {@link ResultCollection#reduce(BiFunction)} method which does not support
+	 * an intermediate mapping.
 	 * </p>
 	 * <pre>{@code
 	 * final String toPrint = resultCollection.reduce(
@@ -416,6 +417,36 @@ public final class ResultCollection<E, O> {
 		return combiner.apply(
 				errs.isEmpty() ? Optional.empty() : Optional.of(fnErr.apply(errs)),
 				oks.isEmpty() ? Optional.empty() : Optional.of(fnOk.apply(oks)));
+	}
+
+	/**
+	 * <p>
+	 * Collapse this collection into a single type.
+	 * </p>
+	 * <p>
+	 * Compare this with the {@link ResultCollection#fold(Function, Function)} which
+	 * returns a Result.err with all of the err values mapped to one type, or if there are no errors,
+	 * returns a Result.ok with all of the ok values mapped to a different type.
+	 * Similarly compare this with the {@link ResultCollection#reduce(Function, Function)} method which maps the
+	 * errs if they exist and drops the oks, or maps the oks otherwise.
+	 * The notable difference with this function is that the err and ok types can be combined.
+	 * Finally, compare this with the {@link ResultCollection#reduce(Function, Function, BiFunction)} which
+	 * applies an intermediate mapping to the elements before combining them.
+	 * </p>
+	 * <pre>{@code
+	 * final String toPrint = resultCollection.reduce(
+	 *     (errList, okList) ->
+	 *         "The errors were [" + String.join(",", errs) + "] and the oks were ["
+	 *         + String.join(",", oks) + "]")
+	 * );
+	 * }</pre>
+	 *
+	 * @param fn the function that takes the errors and mapped oks and returns some value
+	 * @param <R>      the desired return type
+	 * @return the result of the combiner function
+	 */
+	public <R> R reduce(final BiFunction<List<E>, List<O>, R> fn) {
+		return fn.apply(errs, oks);
 	}
 
 	public static final class ResultCollector<EE, OO>

@@ -169,6 +169,9 @@ public class IntResultCollection<E> {
 				oks.length == 0 ? Optional.empty() : Optional.of(fnOk.apply(oks)));
 	}
 
+	public <R> R reduce(final BiFunction<List<E>, int[], R> fn)
+	{ return fn.apply(errs, oks); }
+
 	public static final class IntResultCollector<EE>
 			implements Collector<IntResult<EE>, IntResultCollectionBuilder<EE>, IntResultCollection<EE>> {
 		@Override public Supplier<IntResultCollectionBuilder<EE>> supplier () { return IntResultCollectionBuilder::new; }

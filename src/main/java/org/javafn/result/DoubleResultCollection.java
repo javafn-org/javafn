@@ -170,6 +170,9 @@ public class DoubleResultCollection<E> {
 				oks.length == 0 ? Optional.empty() : Optional.of(fnOk.apply(oks)));
 	}
 
+	public <R> R reduce(final BiFunction<List<E>, double[], R> fn)
+	{ return fn.apply(errs, oks); }
+
 	public static final class DoubleResultCollector<EE>
 			implements Collector<DoubleResult<EE>, DoubleResultCollectionBuilder<EE>, DoubleResultCollection<EE>> {
 		@Override public Supplier<DoubleResultCollectionBuilder<EE>> supplier () { return DoubleResultCollectionBuilder::new; }
