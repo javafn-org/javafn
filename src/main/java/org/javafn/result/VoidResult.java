@@ -1,6 +1,5 @@
 package org.javafn.result;
 
-import org.javafn.result.Result.ErrProjection;
 import org.javafn.result.VoidResultCollection.VoidResultCollector;
 
 import java.util.Arrays;
@@ -11,8 +10,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -72,6 +69,7 @@ public abstract class VoidResult<ERR> {
 	 * A {@link Result.Projection} of a Result as an Ok value, which may or may not be present.
 	 */
 	public interface Ok<E> {
+		void orElseThrow(Supplier<RuntimeException> ExceptionSupplier);
 		<O> Result<E, O> map(Supplier<O> fn);
 		<Z> VoidResult<Z> into();
 		<Z> List<VoidResult<Z>> intoList();
@@ -143,6 +141,7 @@ public abstract class VoidResult<ERR> {
 	public static final class OkProjection<E> extends VoidResult<E> implements Ok<E> {
 		private OkProjection(final Sealed _token) { super(_token, false); }
 
+		@Override public void orElseThrow(final Supplier<RuntimeException> unused) { }
 		@Override public <Z> VoidResult<Z> into() { return ok(); }
 		@Override public <Z> List<VoidResult<Z>> intoList() { return Collections.singletonList(ok()); }
 		@Override public <Z> Stream<VoidResult<Z>> intoStream() { return Stream.of(ok()); }
@@ -222,6 +221,7 @@ public abstract class VoidResult<ERR> {
 		private final ErrProjection<E> errResult;
 		private EmptyOkProjection(final ErrProjection<E> _errResult) { errResult = _errResult; }
 
+		@Override public void orElseThrow(final Supplier<RuntimeException> fn) { throw fn.get(); }
 		@Override public <Z> Result<E, Z> map(final Supplier<Z> fn) { return Result.err(errResult.errValue); }
 
 		@Override public <Z> VoidResult<Z> into()
