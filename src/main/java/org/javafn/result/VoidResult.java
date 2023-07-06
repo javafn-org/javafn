@@ -250,7 +250,7 @@ public abstract class VoidResult<ERR> {
 	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, err); }
 
 	@SafeVarargs
-	public static <EE, OO> ErrProjection<List<EE>> errList(final EE... errs)
+	public static <EE> ErrProjection<List<EE>> errList(final EE... errs)
 	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, Arrays.asList(errs)); }
 
 	public static <EE> OkProjection<EE> ok() {
