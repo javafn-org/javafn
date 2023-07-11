@@ -20,11 +20,13 @@ import java.util.stream.Stream;
 public class ExceptionVsResult {
 	static int numStrings = 100_000;
 	static int numRunsPerWarmup = 50;
-	static int numRunsPerProbability = 100;
+	static int numRunsPerProbability = 200;
 
 	public static void main(String[] args) {
 		final List<String[]> data = new ArrayList<>();
-		data.add(new String[] {"Probabilities", "Exceptions", "Results"});
+		data.add(new String[] {"Probabilities",
+				"Exceptions Min", "Exceptions Max", "Exceptions Avg",
+				"Results Min", "Results Max", "Results Avg"});
 
 		final Random random = new Random();
 
@@ -107,7 +109,11 @@ public class ExceptionVsResult {
 
 			data.add(new String[]{
 					String.format("%.2f", probability),
+					Long.toString(Arrays.stream(exceptionTimes).min().orElse(-1L)),
+					Long.toString(Arrays.stream(exceptionTimes).max().orElse(-1L)),
 					Long.toString(Arrays.stream(exceptionTimes).sum() / numRunsPerProbability),
+					Long.toString(Arrays.stream(resultTimes).min().orElse(-1L)),
+					Long.toString(Arrays.stream(resultTimes).max().orElse(-1L)),
 					Long.toString(Arrays.stream(resultTimes).sum() / numRunsPerProbability)
 			});
 		}
@@ -179,7 +185,7 @@ public class ExceptionVsResult {
 		try {
 			final FileWriter output = new FileWriter(file);
 			for (final String[] line : data) {
-				output.write(String.format("%s, %s, %s\n", line[0], line[1], line[2]));
+				output.write(String.join(", ", line) + '\n');
 			}
 			output.flush();
 			output.close();

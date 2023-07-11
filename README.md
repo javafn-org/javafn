@@ -33,6 +33,10 @@ Try.get(() -> new URL(theUrl))                                // Result<Exceptio
 
 See more demo code [in the source tree](./src/test/java/org/javafn/demo).
 
+Check out the [benchmark](./src/test/java/org/javafn/bench/ExceptionVsResult.java) that compares the `Integer.parseInt` function with an equivilent function that returns a `Result`.  Notice that as the number of errors increases, so too does the runtime for the code that throws exceptions.  On the other hand, the same function that returns a Result shows virtually no increase in runtime as the number of errors increase.
+
+![Plot of runtimes using exception vs result](./parseIntBenchmark.png)
+
 The syntax and usage of the Result class is heavily inspired by Rust's Result type [https://doc.rust-lang.org/std/result/](https://doc.rust-lang.org/std/result/) and Scala's Either type (prior to v2.13) [https://www.scala-lang.org/api/2.12.11/scala/util/Either.html](https://www.scala-lang.org/api/2.12.11/scala/util/Either.html).
 
 `java(fn)` also includes an `Either` class with many similar features.  The distinction is about semantics.  To a new Java developer unfamiliar with Haskell, "Result" conveys more meaning then "Either", and "asErr"/"asOk" is more intuitive than "asLeft"/"asRight".  `Either` is included because sometimes you don't want to apply "err/ok" semantics.  Rather you want to convey that a piece of data may be represented in one of two types, both equally valid.
