@@ -1,7 +1,6 @@
 package org.javafn.bench;
 
 import org.javafn.result.IntResult;
-import org.javafn.tuple.Pair;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -57,14 +56,19 @@ public class ExceptionVsResult {
 			final long[] resultTimes = new long[numRunsPerProbability];
 			final long[] exceptionTimes = new long[numRunsPerProbability];
 
+			// So we're "using" the results
+			final long[] goodValSum = {0, 0};
 			final List<String> exceptions = new ArrayList<>(numBadStrings);
+			final List<String> results = new ArrayList<>(numBadStrings);
+
 			final IntConsumer testUsingException = index -> {
 				Collections.shuffle(stringList);
 				exceptions.clear();
+				goodValSum[0] = 0;
 				final long startExceptions = System.nanoTime();
 				for (final String s : stringList) {
 					try {
-						Integer.parseInt(s, 10);
+						goodValSum[0] += Integer.parseInt(s, 10);
 					} catch (final NumberFormatException x) {
 						exceptions.add(x.getMessage());
 					}
@@ -73,13 +77,15 @@ public class ExceptionVsResult {
 				exceptionTimes[index] = System.nanoTime() - startExceptions;
 			};
 
-			final List<String> results = new ArrayList<>(numBadStrings);
 			final IntConsumer testUsingResult = index -> {
 				Collections.shuffle(stringList);
 				results.clear();
+				goodValSum[1] = 0;
 				final long startResult = System.nanoTime();
 				for (final String s : stringList) {
-					ExceptionVsResult.parseInt(s, 10).asErr().peek(results::add);
+					ExceptionVsResult.parseInt(s, 10)
+							.asErr().peek(results::add)
+							.asOk().peek(v -> goodValSum[1] += v);
 				}
 				if (index < 0) return;  // warmup
 				resultTimes[index] =  System.nanoTime() - startResult;
@@ -97,6 +103,9 @@ public class ExceptionVsResult {
 				// Validate that we're getting the same results
 				if (results.size() != exceptions.size()) {
 					System.err.println("Something's wrong; message sets are not the same size!");
+				}
+				if (goodValSum[0] != goodValSum[1]) {
+					System.err.println("Something's wrong; Sums aren't equal!");
 				}
 				// More detailed validation, outputting the first result of the mismatching sets
 				// if (results.size() != exceptions.size() ||
@@ -181,6 +190,16 @@ public class ExceptionVsResult {
 	}
 
 	private static void writeToCSV(List<String[]> data) {
+		// It can be done in a single statement, but this may not be the best example of how.
+//		Result.<Exception, File>ok(new File("src/test/java/org/javafn/bench/ExceptionVsResult.csv"))
+//				.asOk().flatMap(Try.Map(FileWriter::new))
+//				.asOk().map(output -> Pair.of(output,
+//						data.stream().map(line -> String.join(", ", line)).collect(Collectors.joining("\n"))))
+//				.asOk().flatMap(Pair.Map((out, csv) -> Try.get(() -> { out.write(csv); return out; })))
+//				.asOk().flatMap(out -> Try.get(() -> { out.flush(); return out; }))
+//				.asOk().flatMapToVoid(out -> Try.run(out::close))
+//				.asErr().peek(ex -> System.err.println("An exception occurred writing to CSV: " + ex.getMessage()));
+
 		final File file = new File("src/test/java/org/javafn/bench/ExceptionVsResult.csv");
 		try {
 			final FileWriter output = new FileWriter(file);
