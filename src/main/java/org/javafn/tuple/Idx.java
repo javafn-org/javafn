@@ -1,6 +1,7 @@
 package org.javafn.tuple;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -38,6 +39,13 @@ public class Idx<T> {
 			return new Idx<>(count++, t);
 		}
 	}
+	public static class ParallelStreamIndexer<TT> {
+		AtomicInteger count = new AtomicInteger(0);
+
+		public Idx<TT> accept(final TT t) {
+			return new Idx<>(count.getAndIncrement(), t);
+		}
+	}
 
 	public static <TT, R> Function<Idx<TT>, Idx<R>> Map(final IndexedFunction<TT, R> fn) { return idx -> idx.map(fn); }
 	public static <TT, R> Function<Idx<TT>, Idx<R>> Map(final Function<TT, R> fn) { return idx -> idx.map(fn); }
@@ -51,6 +59,14 @@ public class Idx<T> {
 
 	public static <TT> Function<TT, Idx<TT>> enumerate() {
 		return new StreamIndexer<TT>()::accept;
+	}
+
+	public static <TT> Stream<Idx<TT>> enumerateParallel(final Stream<TT> stream) {
+		return stream.map(new ParallelStreamIndexer<TT>()::accept);
+	}
+
+	public static <TT> Function<TT, Idx<TT>> enumerateParallel() {
+		return new ParallelStreamIndexer<TT>()::accept;
 	}
 
 	private final int i;

@@ -2,12 +2,15 @@ package org.javafn.tuple;
 
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 
 public class IdxTest {
 
@@ -58,6 +61,30 @@ public class IdxTest {
 		for (int i = 0; i < numItems; i++) {
 			assertEquals("Expected the list index and Idx.i() values to be the same",
 					i, idxList.get(i).i());
+		}
+	}
+
+	@Test
+	public void testParallel() {
+		final int numItems = 1000;
+		final int[] expected = IntStream.range(0, numItems).toArray();
+		{
+			final int[] actual = Stream.generate(UUID::randomUUID).limit(numItems)
+					.map(Idx.enumerateParallel())
+					.parallel()
+					.mapToInt(Idx::i)
+					.toArray();
+			Arrays.sort(actual);
+			assertArrayEquals("Expected the arrays to be equal; using map inline", expected, actual);
+		}
+		{
+			final int[] actual = Idx.enumerateParallel(
+					Stream.generate(UUID::randomUUID).limit(numItems))
+					.parallel()
+					.mapToInt(Idx::i)
+					.toArray();
+			Arrays.sort(actual);
+			assertArrayEquals("Expected the arrays to be equal; using static stream wrapper", expected, actual);
 		}
 	}
 }
