@@ -1,5 +1,6 @@
 package org.javafn.bench;
 
+import org.javafn.lang.Integers;
 import org.javafn.result.IntResult;
 
 import java.io.File;
@@ -83,7 +84,7 @@ public class ExceptionVsResult {
 				goodValSum[1] = 0;
 				final long startResult = System.nanoTime();
 				for (final String s : stringList) {
-					ExceptionVsResult.parseInt(s, 10)
+					Integers.parseInt(s, 10)
 							.asErr().peek(results::add)
 							.asOk().peek(v -> goodValSum[1] += v);
 				}
@@ -127,66 +128,6 @@ public class ExceptionVsResult {
 			});
 		}
 		writeToCSV(data);
-	}
-
-	private static IntResult<String> parseInt(final String s, final int radix) {
-		// Borrowed from Integer.parseInt(...)
-		if (s == null) {
-			return IntResult.err("null");
-		}
-
-		if (radix < Character.MIN_RADIX) {
-			return IntResult.err("radix " + radix + " less than Character.MIN_RADIX");
-		}
-
-		if (radix > Character.MAX_RADIX) {
-			return IntResult.err("radix " + radix + " greater than Character.MAX_RADIX");
-		}
-
-		int result = 0;
-		boolean negative = false;
-		int i = 0, len = s.length();
-		int limit = -Integer.MAX_VALUE;
-		int multmin;
-		int digit;
-
-		if (len > 0) {
-			char firstChar = s.charAt(0);
-			if (firstChar < '0') { // Possible leading "+" or "-"
-				if (firstChar == '-') {
-					negative = true;
-					limit = Integer.MIN_VALUE;
-				} else if (firstChar != '+')
-					return forInputString(s);
-
-				if (len == 1) // Cannot have lone "+" or "-"
-					return forInputString(s);
-				i++;
-			}
-			multmin = limit / radix;
-			while (i < len) {
-				// Accumulating negatively avoids surprises near MAX_VALUE
-				digit = Character.digit(s.charAt(i++),radix);
-				if (digit < 0) {
-					return forInputString(s);
-				}
-				if (result < multmin) {
-					return forInputString(s);
-				}
-				result *= radix;
-				if (result < limit + digit) {
-					return forInputString(s);
-				}
-				result -= digit;
-			}
-		} else {
-			return forInputString(s);
-		}
-		return IntResult.ok(negative ? result : -result);
-	}
-
-	private static IntResult<String> forInputString(final String s) {
-		return IntResult.err("For input string: \"" + s + "\"");
 	}
 
 	private static void writeToCSV(List<String[]> data) {
