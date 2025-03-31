@@ -145,6 +145,18 @@ public final class Pair<V1, V2> {
      */
     public static <A, B, R> Function<Pair<A, B>, Pair<A, R>> Map2(final BiFunction<A, B, R> fn)
     { return pair -> pair.map2(fn); }
+
+    /* TODO: document */
+    /* TODO: Duplicate in Trio and Quad */
+    public static <A, B, R> Function<Pair<A, B>, Stream<Pair<R, B>>> FlatMap1(final Function<A, Stream<R>> fn)
+    { return pair -> pair.flatMap1(fn); }
+    public static <A, B, R> Function<Pair<A, B>, Stream<Pair<A, R>>> FlatMap2(final Function<B, Stream<R>> fn)
+    { return pair -> pair.flatMap2(fn); }
+    public static <A, B, R> Function<Pair<A, B>, Stream<Pair<R, B>>> FlatMap1(final BiFunction<A, B, Stream<R>> fn)
+    { return pair -> pair.flatMap1(fn); }
+    public static <A, B, R> Function<Pair<A, B>, Stream<Pair<A, R>>> FlatMap2(final BiFunction<A, B, Stream<R>> fn)
+    { return pair -> pair.flatMap2(fn); }
+
     /**
      * Return a function that accepts a Pair and calls {@link Pair#peek(BiConsumer)} on it.
      */
@@ -390,6 +402,11 @@ public final class Pair<V1, V2> {
      */
     public <NV2> Pair<V1, NV2> map2(final BiFunction<V1, V2, NV2> fn) { return Pair.of(v1, fn.apply(v1, v2)); }
 
+    /** TODO: Document */
+    public <NV1> Stream<Pair<NV1, V2>> flatMap1(final BiFunction<V1, V2, Stream<NV1>> fn) { return fn.apply(v1, v2).map(nv1 -> Pair.of(nv1, v2)); }
+    public <NV2> Stream<Pair<V1, NV2>> flatMap2(final BiFunction<V1, V2, Stream<NV2>> fn) { return fn.apply(v1, v2).map(nv2 -> Pair.of(v1, nv2)); }
+    public <NV1> Stream<Pair<NV1, V2>> flatMap1(final Function<V1, Stream<NV1>> fn) { return fn.apply(v1).map(nv1 -> Pair.of(nv1, v2)); }
+    public <NV2> Stream<Pair<V1, NV2>> flatMap2(final Function<V2, Stream<NV2>> fn) { return fn.apply(v2).map(nv2 -> Pair.of(v1, nv2)); }
     /**
      * Execute the supplied consumer on this Pair's values and return this Pair unmodified.
      * Useful for inspections.
