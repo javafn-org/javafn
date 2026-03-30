@@ -81,13 +81,13 @@ publishing {
     }
     repositories {
         maven {
-            // The official documentation on sonatype.org does not use modern gradle.
-            // I based this configuration from the following
-            // https://dev.to/kengotoda/deploying-to-ossrh-with-gradle-in-2020-1lhi
+			name = "SonatypeCentral"
+			url = uri(
+                version.endsWith("-SNAPSHOT")
+                    ? "https://central.sonatype.com/repository/maven-snapshots/"
+                    : "https://ossrh-staging-api.central.sonatype.com/service/local/"
+            )
 
-             url = version.endsWith("-SNAPSHOT")
-                     ? "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                     : "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
             credentials {
                 username = System.getenv('MAVEN_USERNAME')
                 password = System.getenv('MAVEN_PASSWORD')
