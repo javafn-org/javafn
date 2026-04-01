@@ -94,6 +94,10 @@ public interface AnyError {
 	}
 
 	record ExceptionError<E extends Exception>(E error, Class<E> type) implements AnyError {
+		@SuppressWarnings("unchecked")
+		public ExceptionError(final Exception x) {
+			this((E) x, (Class<E>) x.getClass());
+		}
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();
 			final PrintWriter pw = new PrintWriter(sw);
