@@ -21,23 +21,22 @@ import static org.javafn.result.Result.ok;
  * Build an object from fields where getting the field may produce errors, for example,
  * parsing a JSON object.
  * <p>
- *     Assuming a record {@code Foo(String v1, int v2, List<Bar> v3) { }}, the use pattern would be
- *     to create field objects {@code var f1 = new TypedField<String>(...); ...
- *     var f3 = new TypedListField<Bar>(...); }, then construct the object as
+ * Assuming a record {@code Foo(String v1, int v2, List<Bar> v3) { }}, the use pattern would be
+ * to create field objects {@code var f1 = new TypedField<String>(...); ...
+ * var f3 = new TypedListField<Bar>(...); }, then construct the object as
  *
- *     <pre>
- *     {@code
- *          Result<AnyError, Foo> fooParsed = new ResultBuilder<Foo>()
- *              .with(f1, () -> get v1 or throw exception )
- *              .with(f2, () -> get v2 or throw exception )
- *              .with(f3, () -> List.of(bar1Parsed, bar2Parsed, ...)
- *              .build(fields -> new Foo(fields.get(f1), fields.get(f2), fields.get(f3)));
- *     }</pre>
- *
- *     If any of the getters produce an error, the value of fooParsed will be an Err.  The AnyError type
- *     will aggregate, so if all fields fail to parse, the result will contain all errors generated.
- *     If no errors were generated, the builder is called with a map of the supplied fields to their values.
- * </p>
+ * <pre>
+ * {@code
+ *      Result<AnyError, Foo> fooParsed = new ResultBuilder<Foo>()
+ *          .with(f1, () -> get v1 or throw exception )
+ *          .with(f2, () -> get v2 or throw exception )
+ *          .with(f3, () -> List.of(bar1Parsed, bar2Parsed, ...)
+ *          .build(fields -> new Foo(fields.get(f1), fields.get(f2), fields.get(f3)));
+ * }</pre>
+ * <p>
+ * If any of the getters produce an error, the value of fooParsed will be an Err.  The AnyError type
+ * will aggregate, so if all fields fail to parse, the result will contain all errors generated.
+ * If no errors were generated, the builder is called with a map of the supplied fields to their values.
  */
 public class ResultBuilder<B> {
 
@@ -99,7 +98,7 @@ public class ResultBuilder<B> {
 		}
 		return this;
 	}
-	
+
 	public <T> ResultBuilder<B> with(final TypedListField<T> field, final Supplier<List<Result<AnyError, T>>> _values) {
 		final var values = _values.get();
 		final var errs = values.stream()
