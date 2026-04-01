@@ -32,7 +32,7 @@ jobs:
       with:
         arguments: build
     
-    - name: Gradle 'release'
+    - name: Gradle 'publishToCentralPortal'
       uses: gradle/gradle-build-action@v2
       env:
         MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
@@ -40,4 +40,4 @@ jobs:
         OSSRG_GPG_ID: ${{ secrets.OSSRH_GPG_ID }}
         OSSRH_GPG_SECRET_KEY_PASSWORD: ${{ secrets.OSSRH_GPG_SECRET_KEY_PASSWORD }}
       with:
-        arguments: publish
+        arguments: publishToCentralPortal 
