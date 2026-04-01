@@ -145,14 +145,7 @@ public class Try {
     }
 
     public static Supplier<VoidResult<Exception>> Run(final ThrowingRunnable fn) {
-        return () -> {
-            try {
-                fn.run();
-            } catch (final Exception e) {
-                return VoidResult.err(e);
-            }
-            return VoidResult.ok();
-        };
+        return () -> run(fn);
     }
 
     /**
@@ -167,7 +160,7 @@ public class Try {
      *     .count();
      * System.out.println(errCount + " files failed to close.");
      * }</pre>
-     * Compare this to {@link #run(ThrowingRunnable)},
+     * Compare this to {@link #run(Try.ThrowingRunnable)},
      * which executes and returns a Result, this function RETURNS A FUNCTION.
      * Its intended use is in a stream.  Instead of passing a lambda that calls Try.*,
      * this function generates the lambda.
@@ -179,7 +172,7 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #run(ThrowingRunnable)}.
      * @param fn the consumer that can throw an exception
      */
-    public static <T> Function<T, VoidResult<Exception>> Accept(final ThrowingConsumer<T> fn) {
+    public static <T> Function<T, VoidResult<Exception>> Accept(final Try.ThrowingConsumer<T> fn) {
         return t -> {
             try {
                 fn.accept(t);
@@ -203,7 +196,7 @@ public class Try {
      *     .count();
      * System.out.println("There are " + errCount + " bad numbers in the supplied array.");
      * }</pre>
-     * Compare this to {@link #get(ThrowingSupplier)}
+     * Compare this to {@link #get(Try.ThrowingSupplier)}
      * which executes and returns a Result, this function RETURNS A FUNCTION.
      * Its intended use is in a stream.  Instead of passing a lambda that calls Try.*,
      * this function generates the lambda.
@@ -215,7 +208,7 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #get(ThrowingSupplier)}.
      * @param fn the mapping function that can throw an exception
      */
-    public static <T, U> Function<T, Result<Exception, U>> Map(final ThrowingFunction<T, U> fn) {
+    public static <T, U> Function<T, Result<Exception, U>> Map(final Try.ThrowingFunction<T, U> fn) {
         return t -> {
             final U u;
             try {

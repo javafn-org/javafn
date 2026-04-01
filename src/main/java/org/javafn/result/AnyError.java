@@ -2,6 +2,8 @@ package org.javafn.result;
 
 import org.javafn.util.Util;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -9,7 +11,7 @@ import java.util.stream.Collectors;
 import static org.javafn.result.Result.err;
 
 /**
- * A wrapper that can be used with our Result class to represent errors from multiple sources,
+ * A wrapper that can be used with the Result class to represent errors from multiple sources,
  * for example strings or exceptions, as well as aggregate them without worrying too much about
  * their wrapped types.  Each implementation produces a single string {@link #message()},
  * which may be built from a wrapped collection of messages.  These are joined using a newline.
@@ -66,10 +68,9 @@ public interface AnyError {
 			this(List.of(), EMPTY);
 		}
 		public ErrorList(final List<AnyError> errors) {
-			this(errors, () ->
-					errors.stream()
-							.map(AnyError::message)
-							.collect(Collectors.joining("\n")));
+			this(errors, () -> errors.stream()
+					.map(AnyError::message)
+					.collect(Collectors.joining("\n")));
 		}
 		@Override public String message() { return toMessage.get(); }
 		@Override
@@ -87,16 +88,19 @@ public interface AnyError {
 	}
 
 	record StringListError(List<String> messages) implements AnyError {
-		public StringListError() {
-			this(List.of());
-		}
+		public StringListError() { this(List.of()); }
 		@Override public String message() { return String.join("\n", messages); }
 		@Override public String toString() { return message(); }
 	}
 
 	record ExceptionError<E extends Exception>(E error, Class<E> type) implements AnyError {
-		// TODO: include the full stack trace and any caused by errors
-		@Override public String message() { return error.getMessage(); }
+		@Override public String message() {
+			final StringWriter sw = new StringWriter();
+			final PrintWriter pw = new PrintWriter(sw);
+			error.printStackTrace(pw);
+			pw.flush();
+			return sw.toString();
+		}
 		@Override public String toString() { return message(); }
 	}
 

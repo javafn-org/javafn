@@ -1,6 +1,8 @@
 package org.javafn.tuple;
 
 import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -11,6 +13,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -316,6 +320,22 @@ public final class Pair<V1, V2> {
      */
     public static <A> Stream<A> stream(final Pair<A, A> pair) { return Stream.of(pair._1(), pair._2()); }
 
+    /**
+     * Return a {@link Collector} that maps pairs to map entries where the first entry is the key and the second is the value.
+     */
+    public static <KEY, VAL> Collector<Pair<? extends KEY, ? extends VAL>, ?, Map<KEY, VAL>> toMap() {
+        return Collectors.toMap(Pair::_1, Pair::_2);
+    }
+
+    /** Return a function that calls {@link #from(Entry)}. */
+    public static <KEY, VAL> Function<Map.Entry<KEY, VAL>, Pair<KEY, VAL>> From() { return Pair::from; }
+    /**
+     * Create a Pair from an {@link java.util.Map.Entry}where the entry key is
+     * the first element and the value is the second element.
+     */
+    public static <KEY, VAL> Pair<KEY, VAL> from(final Map.Entry<KEY, VAL> e) {
+        return new Pair<>(e.getKey(), e.getValue());
+    }
     /**
      * Create a Pair with the supplied values.
      */

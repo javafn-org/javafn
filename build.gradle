@@ -1,8 +1,8 @@
 plugins {
     id 'java-library'
-    id 'maven-publish'
-    id 'signing'
-	id 'io.github.boolivar.sonatype-portal-publish' version '0.1.0'
+	id 'maven-publish'
+	id 'signing'
+	id 'net.thebugmc.gradle.sonatype-central-portal-publisher' version "1.2.4"
 }
 
 sourceCompatibility = JavaVersion.VERSION_17
@@ -25,78 +25,64 @@ dependencies {
     testImplementation('junit:junit:4.13.1')
 }
 
-publishing {
-    publications {
-        javafn(MavenPublication) {
-            groupId = group
-            artifactId = name
-            version = version
+centralPortal {
+	username = 'LeZw0N'
+	password = 's4meBP5jbnzBGV4kx9zCznRttxCI9rVd1'
 
-            pom {
-                name = 'JavaFn'
-                description = '''\
-                    |Additional functional tools for Java.
-                    |Adds support for Result and Either algebraic types.
-                    |Includes a set of static Try methods that return Results so that checked exceptions
-                    |can be used in streams seamlessly.
-                    |Finally, includes Pair, Trio, and Quad tuples that work well with streams.
-                    |'''.stripMargin().replaceAll("\n", " ")
-                url = 'https://github.com/javafn-org/javafn'
-                scm {
-                    connection = 'scm:git:git://github.com:javafn-org/javafn.git'
-                    developerConnection = 'scm:git:ssh://git@github.com:javafn-org/javafn.git'
-                    url = 'https://github.com/javafn-org/javafn'
-                }
-                licenses {
-                    license {
-                        name = 'BSD-3-Clause'
-                        url = 'https://opensource.org/license/BSD-3-clause/'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'ben-stringer'
-                        name = 'Ben Stringer'
-                        email = 'ben.stringer.jr@javafn.org'
-                    }
-                    developer {
-                        id = 'Archthebald'
-                        name = 'Dakota Maulding'
-                        email = ''
-                    }
-                    developer {
-                        id = 'TrevorPatorno'
-                        name = 'Trevor Patorno'
-                        email = ''
-                    }
-                    developer {
-                        id = 'nichipedia'
-                        name = 'Nicholas Moran'
-                        email = ''
-                    }
-                }
-            }
-
-            from components.java
-        }
-    }
+	pom {
+		name = 'JavaFn'
+		description = '''\
+			|Additional functional tools for Java.
+			|Adds support for Result and Either algebraic types.
+			|Includes a set of static Try methods that return Results so that checked exceptions
+			|can be used in streams seamlessly.
+			|Finally, includes Pair, Trio, and Quad tuples that work well with streams.
+			|'''.stripMargin().replaceAll("\n", " ")
+		url = 'https://github.com/javafn-org/javafn'
+		scm {
+			connection = 'scm:git:git://github.com:javafn-org/javafn.git'
+			developerConnection = 'scm:git:ssh://git@github.com:javafn-org/javafn.git'
+			url = 'https://github.com/javafn-org/javafn'
+		}
+		licenses {
+			license {
+				name = 'BSD-3-Clause'
+				url = 'https://opensource.org/license/BSD-3-clause/'
+			}
+		}
+		developers {
+			developer {
+				id = 'ben-stringer'
+				name = 'Ben Stringer'
+				email = 'ben.stringer.jr@javafn.org'
+			}
+			developer {
+				id = 'Archthebald'
+				name = 'Dakota Maulding'
+				email = ''
+			}
+			developer {
+				id = 'TrevorPatorno'
+				name = 'Trevor Patorno'
+				email = ''
+			}
+			developer {
+				id = 'nichipedia'
+				name = 'Nicholas Moran'
+				email = ''
+			}
+		}
+	}
 }
 
 signing {
-    useGpgCmd()
-    project.ext.set('signing.gnupg.executable', 'gpg')
-    project.ext.set('signing.gnupg.keyName', System.getenv("OSSRH_GPG_ID"))
-    project.ext.set('signing.gnupg.passphrase', System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD"))
-    sign publishing.publications.javafn
+	useGpgCmd()
+	project.ext.set('signing.gnupg.executable', 'gpg')
+	project.ext.set('signing.gnupg.keyName', System.getenv("OSSRH_GPG_ID"))
+	project.ext.set('signing.gnupg.passphrase', System.getenv("OSSRH_GPG_SECRET_KEY_PASSWORD"))
 }
 
 tasks.withType(Sign) {
-    onlyIf { System.getenv().containsKey("CI") }
+	onlyIf { System.getenv().containsKey("CI") }
 }
 
-sonatypePortalPublish {
-    url = "https://central.sonatype.com/api/v1/publisher/upload"
-	token = System.getenv("SONATYPE_BEARER_TOKEN")
-    autoPublish = true
-    bundleName = "${project.name}-${project.version}"
-}
