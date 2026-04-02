@@ -106,7 +106,7 @@ public class ResultBuilder<B> {
 				.map(Err.Get())
 				.toList();
 		if (errs.isEmpty()) {
-			oks.add(Pair.of(field, values.stream().map(Ok.Get())));
+			oks.add(Pair.of(field, values.stream().map(Ok.Get()).toList()));
 		} else {
 			errors.add(new ErrorList(errs));
 		}
