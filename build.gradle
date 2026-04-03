@@ -26,8 +26,8 @@ dependencies {
 }
 
 centralPortal {
-	username = 'LeZw0N'
-	password = 's4meBP5jbnzBGV4kx9zCznRttxCI9rVd1'
+	username = System.getenv("OSSRH_SONATYPE_USERNAME")
+	password = System.getenv("OSSRH_SONATYPE_PASSWORD")
 
 	pom {
 		name = 'JavaFn'
