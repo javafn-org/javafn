@@ -96,7 +96,7 @@ public abstract class VoidResult<ERR> {
 
 		@Override public E get() { return errValue; }
 		@Override public E orElseThrow(final Supplier<RuntimeException> unused) { return errValue; }
-		@Override public Optional<E> opt() { return Optional.of(errValue); }
+		@Override public Optional<E> opt() { return Optional.ofNullable(errValue); }
 		@Override public boolean filter(final Predicate<E> fn) { return fn.test(errValue); }
 		@Override public VoidResult<E> peek(final Consumer<E> fn) { fn.accept(errValue); return this; }
 		@Override public <Z> VoidResult<Z> map(final Function<E, Z> fn) { return err(fn.apply(errValue)); }
@@ -124,14 +124,14 @@ public abstract class VoidResult<ERR> {
 		{ fnErr.accept(errValue); return this; }
 		@Override public <T> T reduce(final Function<E, T> fnErr, final Supplier<T> unused)
 		{ return fnErr.apply(errValue); }
-		@Override public String toString() { return "Err[" + errValue.toString() + "]"; }
+		@Override public String toString() { return "Err[" + errValue + "]"; }
 
-		@Override public int hashCode() { return errValue.hashCode(); }
+		@Override public int hashCode() { return Objects.hashCode(errValue); }
 		@Override public boolean equals(final Object other) {
-			if (other instanceof ErrProjection) {
-				return Objects.equals(errValue, ((ErrProjection<?>) other).errValue);
-			} else if (other instanceof EmptyOkProjection) {
-				return Objects.equals(errValue, ((EmptyOkProjection<?>) other).errResult.errValue);
+			if (other instanceof ErrProjection<?> that) {
+				return Objects.equals(errValue, that.errValue);
+			} else if (other instanceof EmptyOkProjection<?> that) {
+				return Objects.equals(errValue, that.errResult.errValue);
 			} else {
 				return false;
 			}
@@ -171,8 +171,8 @@ public abstract class VoidResult<ERR> {
 		@Override public boolean equals(final Object other) {
 			if (other instanceof OkProjection) {
 				return other == this;
-			} else if (other instanceof EmptyErrProjection) {
-				return ((EmptyErrProjection<?>) other).okResult == this;
+			} else if (other instanceof EmptyErrProjection<?> that) {
+				return that.okResult == this;
 			} else {
 				return false;
 			}
@@ -207,8 +207,8 @@ public abstract class VoidResult<ERR> {
 
 		@Override public int hashCode() { return okResult.hashCode(); }
 		@Override public boolean equals(final Object other) {
-			if (other instanceof EmptyErrProjection) {
-				return Objects.equals(okResult, ((EmptyErrProjection<?>) other).okResult);
+			if (other instanceof EmptyErrProjection<?> that) {
+				return Objects.equals(okResult, that.okResult);
 			} else if (other instanceof OkProjection) {
 				return okResult == other;
 			} else {
@@ -236,10 +236,10 @@ public abstract class VoidResult<ERR> {
 
 		@Override public int hashCode() { return errResult.hashCode(); }
 		@Override public boolean equals(final Object other) {
-			if (other instanceof EmptyOkProjection) {
-				return Objects.equals(errResult, ((EmptyOkProjection<?>) other).errResult);
-			} else if (other instanceof ErrProjection) {
-				return Objects.equals(errResult.errValue, ((ErrProjection<?>) other).errValue);
+			if (other instanceof EmptyOkProjection<?> that) {
+				return Objects.equals(errResult, that.errResult);
+			} else if (other instanceof ErrProjection<?> that) {
+				return Objects.equals(errResult.errValue, that.errValue);
 			} else {
 				return false;
 			}
