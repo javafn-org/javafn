@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.LongStream;
@@ -53,7 +52,7 @@ public class PairTest {
         final int numElements = 100;
         final List<Pair<Integer, Long>> zipped = Pair.zip(
                 IntStream.range(0, numElements).boxed(), LongStream.range(0, numElements).boxed())
-                .collect(Collectors.toList());
+                .toList();
         assertEquals("Wrong numer of elements", numElements, zipped.size());
         assertEquals("All elements should be equal",
                 numElements, zipped.stream().map(Pair.Map1(i -> Long.valueOf(i))).filter(Pair.Filter(Objects::equals)).count());
@@ -155,7 +154,7 @@ public class PairTest {
     @Test public void testStream() {
         final UUID a = UUID.randomUUID();
         final UUID b = UUID.randomUUID();
-        final List<UUID> collected = Pair.stream(Pair.of(a, b)).collect(Collectors.toList());
+        final List<UUID> collected = Pair.stream(Pair.of(a, b)).toList();
         assertEquals("Expected exactly two elements", 2, collected.size());
         assertEquals("Expected the first collected element to be the first pair element",
                 a, collected.get(0));
@@ -166,7 +165,7 @@ public class PairTest {
     @Test public void testChunkedObject() {
         final int len = 100;
         final UUID[] uuidArray = IntStream.range(0, len).mapToObj(i -> UUID.randomUUID()).toArray(UUID[]::new);
-        final List<Pair<UUID, UUID>> pairs = Pair.chunks(uuidArray).collect(Collectors.toList());
+        final List<Pair<UUID, UUID>> pairs = Pair.chunks(uuidArray).toList();
         assertEquals("Expecting the number of pairs to be exactly half the number of original items.",
                 len / 2, pairs.size());
         Pair.zip(IntStream.range(0, len/2).map(i -> i * 2).boxed(), pairs.stream())
@@ -179,7 +178,7 @@ public class PairTest {
         final Random random = new Random();
         final int len = 20;
         final double[] doubleArray = DoubleStream.generate(random::nextDouble).limit(len).toArray();
-        final List<Pair<Double, Double>> pairs = Pair.chunks(doubleArray).collect(Collectors.toList());
+        final List<Pair<Double, Double>> pairs = Pair.chunks(doubleArray).toList();
         assertEquals("Expecting the number of pairs to be exactly half the number of original items.",
                 len / 2, pairs.size());
         Pair.zip(IntStream.range(0, len/2).map(i -> i * 2).boxed(), pairs.stream())
@@ -192,7 +191,7 @@ public class PairTest {
         final Random random = new Random();
         final int len = 20;
         final long[] longArray = LongStream.generate(random::nextLong).limit(len).toArray();
-        final List<Pair<Long, Long>> pairs = Pair.chunks(longArray).collect(Collectors.toList());
+        final List<Pair<Long, Long>> pairs = Pair.chunks(longArray).toList();
         assertEquals("Expecting the number of pairs to be exactly half the number of original items.",
                 len / 2, pairs.size());
         Pair.zip(IntStream.range(0, len/2).map(i -> i * 2).boxed(), pairs.stream())
@@ -205,7 +204,7 @@ public class PairTest {
         final Random random = new Random();
         final int len = 20;
         final int[] intArray = IntStream.generate(random::nextInt).limit(len).toArray();
-        final List<Pair<Integer, Integer>> pairs = Pair.chunks(intArray).collect(Collectors.toList());
+        final List<Pair<Integer, Integer>> pairs = Pair.chunks(intArray).toList();
         assertEquals("Expecting the number of pairs to be exactly half the number of original items.",
                 len / 2, pairs.size());
         Pair.zip(IntStream.range(0, len/2).map(i -> i * 2).boxed(), pairs.stream())
@@ -217,7 +216,7 @@ public class PairTest {
 
     @Test public void testChunkedObjectOdd() {
         final Object o = new Object();
-        final List<Pair<Object, Object>> s = Pair.chunks(new Object[] { o }).collect(Collectors.toList());
+        final List<Pair<Object, Object>> s = Pair.chunks(new Object[] { o }).toList();
         assertEquals("Expecting exactly one pair to be generated from a single item", 1, s.size());
         final Pair<Object, Object> pair = s.get(0);
         assertEquals("Expecting the first pair element to be the object in the array.", o, pair._1());
@@ -225,33 +224,33 @@ public class PairTest {
     }
     @Test public void testChunkedDoubleOdd() {
         final double[] d = new double[] { 0.0, 1.1, 2.2 };
-        final List<Pair<Double, Double>> s = Pair.chunks(d).collect(Collectors.toList());
+        final List<Pair<Double, Double>> s = Pair.chunks(d).toList();
         assertEquals("Expecting exactly two pairs to be generated from three items", 2, s.size());
         final Pair<Double, Double> pair = s.get(1);
-        assertEquals("Expecting the first pair element to be the last item from the array.", new Double(d[2]), pair._1());
+        assertEquals("Expecting the first pair element to be the last item from the array.", Double.valueOf(d[2]), pair._1());
         assertNull("Expecting the second pair element to be null", pair._2());
     }
     @Test public void testChunkedLongOdd() {
         final long[] longs = new long[] { 0L, 1L, 2L, 3L, 4L };
-        final List<Pair<Long, Long>> s = Pair.chunks(longs).collect(Collectors.toList());
+        final List<Pair<Long, Long>> s = Pair.chunks(longs).toList();
         assertEquals("Expecting exactly three pairs to be generated from five items", 3, s.size());
         final Pair<Long, Long> pair = s.get(2);
-        assertEquals("Expecting the first pair element to be the last item from the array.", new Long(longs[4]), pair._1());
+        assertEquals("Expecting the first pair element to be the last item from the array.", Long.valueOf(longs[4]), pair._1());
         assertNull("Expecting the second pair element to be null", pair._2());
     }
     @Test public void testChunkedIntOdd() {
         final int[] ints = new int[] { 0, 1, 2, 3, 4 };
-        final List<Pair<Integer, Integer>> s = Pair.chunks(ints).collect(Collectors.toList());
+        final List<Pair<Integer, Integer>> s = Pair.chunks(ints).toList();
         assertEquals("Expecting exactly three pairs to be generated from five items", 3, s.size());
         final Pair<Integer, Integer> pair = s.get(2);
-        assertEquals("Expecting the first pair element to be the last item from the array.", new Integer(ints[4]), pair._1());
+        assertEquals("Expecting the first pair element to be the last item from the array.", Integer.valueOf(ints[4]), pair._1());
         assertNull("Expecting the second pair element to be null", pair._2());
     }
 
     @Test public void testWindowObj() {
         final int len = 20;
         final UUID[] uuidArray = IntStream.range(0, len).mapToObj(i -> UUID.randomUUID()).toArray(UUID[]::new);
-        final List<Pair<UUID, UUID>> pairs = Pair.windows(uuidArray).collect(Collectors.toList());
+        final List<Pair<UUID, UUID>> pairs = Pair.windows(uuidArray).toList();
         assertEquals("Expecting the number of windows to be 1 less than the original array size",
                 len - 1, pairs.size());
         Pair.zip(IntStream.range(0, len - 1).boxed(), pairs.stream())
@@ -264,7 +263,7 @@ public class PairTest {
         final Random random = new Random();
         final int len = 20;
         final double[] doubleArray = DoubleStream.generate(random::nextDouble).limit(len).toArray();
-        final List<Pair<Double, Double>> pairs = Pair.windows(doubleArray).collect(Collectors.toList());
+        final List<Pair<Double, Double>> pairs = Pair.windows(doubleArray).toList();
         assertEquals("Expecting the number of windows to be 1 less than the original array size",
                 len - 1, pairs.size());
         Pair.zip(IntStream.range(0, len - 1).boxed(), pairs.stream())
@@ -277,7 +276,7 @@ public class PairTest {
         final Random random = new Random();
         final int len = 20;
         final long[] longArray = LongStream.generate(random::nextLong).limit(len).toArray();
-        final List<Pair<Long, Long>> pairs = Pair.windows(longArray).collect(Collectors.toList());
+        final List<Pair<Long, Long>> pairs = Pair.windows(longArray).toList();
         assertEquals("Expecting the number of windows to be 1 less than the original array size",
                 len - 1, pairs.size());
         Pair.zip(IntStream.range(0, len - 1).boxed(), pairs.stream())
@@ -290,7 +289,7 @@ public class PairTest {
         final Random random = new Random();
         final int len = 20;
         final int[] intArray = IntStream.generate(random::nextInt).limit(len).toArray();
-        final List<Pair<Integer, Integer>> pairs = Pair.windows(intArray).collect(Collectors.toList());
+        final List<Pair<Integer, Integer>> pairs = Pair.windows(intArray).toList();
         assertEquals("Expecting the number of windows to be 1 less than the original array size",
                 len - 1, pairs.size());
         Pair.zip(IntStream.range(0, len - 1).boxed(), pairs.stream())
