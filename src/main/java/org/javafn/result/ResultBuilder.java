@@ -92,7 +92,7 @@ public class ResultBuilder<B> {
 	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<T >fn) {
 		final Result<Exception, T> res = Try.get(fn);
 		if (res.isErr) {
-			errors.add(new ExceptionError<>(res.asErr().get()));
+			errors.add(new ExceptionError<>(res.asErr()));
 		} else {
 			oks.add(Pair.of(field, res.asOk().get()));
 		}
@@ -100,8 +100,8 @@ public class ResultBuilder<B> {
 	}
 
 	public <T> ResultBuilder<B> with(final TypedListField<T> field, final Supplier<List<Result<AnyError, T>>> _values) {
-		final var values = _values.get();
-		final var errs = values.stream()
+		final List<Result<AnyError, T>> values = _values.get();
+		final List<AnyError> errs = values.stream()
 				.filter(Result::isErr)
 				.map(Err.Get())
 				.toList();

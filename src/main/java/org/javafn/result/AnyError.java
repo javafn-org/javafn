@@ -1,5 +1,7 @@
 package org.javafn.result;
 
+import org.javafn.result.Result.Err;
+import org.javafn.result.Result.ErrProjection;
 import org.javafn.util.Util;
 
 import java.io.PrintWriter;
@@ -97,6 +99,9 @@ public interface AnyError {
 		@SuppressWarnings("unchecked")
 		public ExceptionError(final Exception x) {
 			this((E) x, (Class<E>) x.getClass());
+		}
+		public ExceptionError(final Err<E, ?> x) {
+			this(x.get());
 		}
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();
