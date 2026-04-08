@@ -4,13 +4,14 @@ import org.javafn.result.AnyError.ErrorList;
 import org.javafn.result.AnyError.ExceptionError;
 import org.javafn.result.Result.Err;
 import org.javafn.result.Result.Ok;
-import org.javafn.tuple.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -85,16 +86,23 @@ public class ResultBuilder<B> {
 			return t;
 		}
 	}
+	private interface TypedValue<T, V, F extends TypedField<T>> extends Consumer<BiConsumer<F, V>> {}
+	private record TypedFieldValue<T>(TypedField<T> field, T value) implements TypedValue<T, T, TypedField<T>> {
+		@Override public void accept(final BiConsumer<TypedField<T>, T> fn) { fn.accept(field, value); }
+	}
+	private record TypedListFieldValue<T>(TypedListField<T> field, List<T> value) implements TypedValue<T, List<T>, TypedListField<T>>{
+		@Override public void accept(final BiConsumer<TypedListField<T>, List<T>> fn) { fn.accept(field, value); }
+	}
 
 	private final List<AnyError> errors = new ArrayList<>();
-	private final List<Pair<TypedField<?>, Object>> oks = new ArrayList<>();
+	private final List<TypedValue<?,?,?>> oks = new ArrayList<>();
 
 	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<T >fn) {
 		final Result<Exception, T> res = Try.get(fn);
 		if (res.isErr) {
 			errors.add(new ExceptionError<>(res.asErr()));
 		} else {
-			oks.add(Pair.of(field, res.asOk().get()));
+			oks.add(new TypedFieldValue<>(field, res.asOk().get()));
 		}
 		return this;
 	}
@@ -106,7 +114,7 @@ public class ResultBuilder<B> {
 				.map(Err.Get())
 				.toList();
 		if (errs.isEmpty()) {
-			oks.add(Pair.of(field, values.stream().map(Ok.Get()).toList()));
+			oks.add(new TypedListFieldValue<>(field, values.stream().map(Ok.Get()).toList()));
 		} else {
 			errors.add(new ErrorList(errs));
 		}
@@ -116,7 +124,7 @@ public class ResultBuilder<B> {
 	public Result<AnyError, B> build(final Function<TypedFieldMap, B> fn) {
 		if (errors.isEmpty()) {
 			final Map<ResultBuilder.TypedField<?>, Object> fields = new HashMap<>();
-			oks.forEach(Pair.ForEach(fields::put));
+			oks.forEach(v -> v.accept(fields::put));
 			return ok(fn.apply(new ResultBuilder.TypedFieldMap(fields)));
 		} else {
 			return err(errors.stream()
