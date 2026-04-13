@@ -21,7 +21,8 @@ import static org.javafn.result.Result.err;
 public interface AnyError {
 
 	String message();
-	default ErrorList join(AnyError that) {
+	default AnyError join(AnyError that) {
+		if (that == null) return this;
 		return new ErrorList(List.of(this, that));
 	}
 
@@ -77,6 +78,7 @@ public interface AnyError {
 		@Override public String message() { return toMessage.get(); }
 		@Override
 		public ErrorList join(final AnyError that) {
+			if (that == null) return this;
 			if (that instanceof ErrorList thatList) {
 				return new ErrorList(Util.append(errors, thatList.errors));
 			} else {
