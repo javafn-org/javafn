@@ -89,10 +89,12 @@ public class ResultBuilder<B> {
 	private final List<AnyError> errors = new ArrayList<>();
 	private final List<Pair<TypedField<?>, Object>> oks = new ArrayList<>();
 
-	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<T >fn) {
-		final Result<Exception, T> res = Try.get(fn);
+	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().map(AnyError::from)
+				.asOk().flatMap(Function.identity());
 		if (res.isErr) {
-			errors.add(new ExceptionError<>(res.asErr().get()));
+			errors.add(res.asErr().get());
 		} else {
 			oks.add(Pair.of(field, res.asOk().get()));
 		}
