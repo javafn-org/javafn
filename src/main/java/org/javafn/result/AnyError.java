@@ -1,9 +1,12 @@
 package org.javafn.result;
 
+import org.javafn.result.Result;
+import org.javafn.result.Result.Err;
 import org.javafn.util.Util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -25,6 +28,16 @@ public interface AnyError {
 	}
 
 	/* *******************************************************************************/
+
+	static VoidResult<AnyError> collect(final Result<AnyError, ?>... results) {
+		return Arrays.stream(results)
+				.filter(Result::isErr)
+				.map(r -> r.asErr().get())
+				.reduce(AnyError::join)
+				.<VoidResult<AnyError>>map(VoidResult::err)
+				.orElse(VoidResult.ok());
+
+	}
 
 	static <O> Result<AnyError, O> fail(final String errorMessage) {
 		return err(new StringError(errorMessage));
