@@ -29,7 +29,7 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static VoidResult<AnyError> collect(final Result<AnyError, ?>... results) {
+	static VoidResult<AnyError> joined(final Result<AnyError, ?>... results) {
 		return Arrays.stream(results)
 				.filter(Result::isErr)
 				.map(r -> r.asErr().get())
