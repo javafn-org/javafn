@@ -115,6 +115,19 @@ public class ResultBuilder<B> {
 		return this;
 	}
 
+	public <T> ResultBuilder<B> with(final TypedField<T> field, final Supplier<T> defaultIfNull, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().filterMap(x -> x instanceof NullPointerException, x -> ok(defaultIfNull.get()))
+				.asErr().map(AnyError::from)
+				.asOk().flatMap(Function.identity());
+		if (res.isErr) {
+			errors.add(res.asErr().get());
+		} else {
+			oks.add(Pair.of(field, res.asOk().get()));
+		}
+		return this;
+	}
+
 	public <T> ResultBuilder<B> with(final TypedListField<T> field, final Supplier<List<Result<AnyError, T>>> _values) {
 		final var values = _values.get();
 		final var errs = values.stream()
