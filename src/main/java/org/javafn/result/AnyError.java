@@ -33,13 +33,13 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static <K> Result<AnyError, List<K>> joined(final List<Result<AnyError, K>> results) {
+	static <K> VoidResult<AnyError> joined(final List<Result<AnyError, K>> results) {
 		return results.stream()
 				.filter(Result::isErr)
 				.map(r -> r.asErr().get())
 				.reduce(AnyError::join)
-				.<Result<AnyError, List<K>>>map(Result::err)
-				.orElseGet(() -> ok(results.stream().map(r -> r.asOk().get()).toList()));
+				.<VoidResult<AnyError>>map(VoidResult::err)
+				.orElse(VoidResult.ok());
 	}
 	static <K, J, L> Result<AnyError, List<L>> joined(
 			final List<K> values,
