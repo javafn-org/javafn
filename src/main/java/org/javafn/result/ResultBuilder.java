@@ -4,6 +4,7 @@ import org.javafn.result.AnyError.ErrorList;
 import org.javafn.result.AnyError.ExceptionError;
 import org.javafn.result.Result.Err;
 import org.javafn.result.Result.Ok;
+import org.javafn.result.Try.ThrowingSupplier;
 import org.javafn.tuple.Pair;
 
 import java.util.ArrayList;
@@ -91,6 +92,19 @@ public class ResultBuilder<B> {
 
 	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
 		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().map(AnyError::from)
+				.asOk().flatMap(Function.identity());
+		if (res.isErr) {
+			errors.add(res.asErr().get());
+		} else {
+			oks.add(Pair.of(field, res.asOk().get()));
+		}
+		return this;
+	}
+
+	public <T> ResultBuilder<B> with(final TypedField<T> field, final T defaultIfNull, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().filterMap(x -> x instanceof NullPointerException, x -> ok(defaultIfNull))
 				.asErr().map(AnyError::from)
 				.asOk().flatMap(Function.identity());
 		if (res.isErr) {
