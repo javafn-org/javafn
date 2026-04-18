@@ -4,6 +4,7 @@ import org.javafn.result.AnyError.ErrorList;
 import org.javafn.result.AnyError.ExceptionError;
 import org.javafn.result.Result.Err;
 import org.javafn.result.Result.Ok;
+import org.javafn.result.Try.ThrowingSupplier;
 import org.javafn.tuple.Pair;
 
 import java.util.ArrayList;
@@ -89,10 +90,38 @@ public class ResultBuilder<B> {
 	private final List<AnyError> errors = new ArrayList<>();
 	private final List<Pair<TypedField<?>, Object>> oks = new ArrayList<>();
 
-	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<T >fn) {
-		final Result<Exception, T> res = Try.get(fn);
+	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().map(AnyError::from)
+				.asOk().flatMap(Function.identity());
 		if (res.isErr) {
-			errors.add(new ExceptionError<>(res.asErr()));
+			errors.add(res.asErr().get());
+		} else {
+			oks.add(Pair.of(field, res.asOk().get()));
+		}
+		return this;
+	}
+
+	public <T> ResultBuilder<B> with(final TypedField<T> field, final T defaultIfNull, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().filterMap(x -> x instanceof NullPointerException, x -> ok(defaultIfNull))
+				.asErr().map(AnyError::from)
+				.asOk().flatMap(Function.identity());
+		if (res.isErr) {
+			errors.add(res.asErr().get());
+		} else {
+			oks.add(Pair.of(field, res.asOk().get()));
+		}
+		return this;
+	}
+
+	public <T> ResultBuilder<B> with(final TypedField<T> field, final Supplier<T> defaultIfNull, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+		final Result<AnyError, T> res = Try.get(fn)
+				.asErr().filterMap(x -> x instanceof NullPointerException, x -> ok(defaultIfNull.get()))
+				.asErr().map(AnyError::from)
+				.asOk().flatMap(Function.identity());
+		if (res.isErr) {
+			errors.add(res.asErr().get());
 		} else {
 			oks.add(Pair.of(field, res.asOk().get()));
 		}

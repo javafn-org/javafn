@@ -1,16 +1,21 @@
 package org.javafn.result;
 
+import org.javafn.result.Result;
 import org.javafn.result.Result.Err;
-import org.javafn.result.Result.ErrProjection;
+import org.javafn.result.Result.Ok;
 import org.javafn.util.Util;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.javafn.result.Result.err;
+import static org.javafn.result.Result.ok;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,
@@ -21,11 +26,57 @@ import static org.javafn.result.Result.err;
 public interface AnyError {
 
 	String message();
-	default ErrorList join(AnyError that) {
+	default AnyError join(AnyError that) {
+		if (that == null) return this;
 		return new ErrorList(List.of(this, that));
 	}
 
 	/* *******************************************************************************/
+
+	static VoidResult<AnyError> joined(final Result<AnyError, ?>... results) {
+		return joined(Arrays.asList(results));
+	}
+	static VoidResult<AnyError> joined(final List<Result<AnyError, ?>> results) {
+		return results.stream()
+				.filter(Result::isErr)
+				.map(r -> r.asErr().get())
+				.reduce(AnyError::join)
+				.<VoidResult<AnyError>>map(VoidResult::err)
+				.orElse(VoidResult.ok());
+	}
+	static <K, J, L> Result<AnyError, List<L>> joined(
+			final List<K> values,
+			final Function<K, Result<AnyError, J>> toRes,
+			final Function<K, L> okMapper) {
+		return values.stream()
+				.map(toRes)
+				.filter(Result::isErr)
+				.map(r -> r.asErr().get())
+				.reduce(AnyError::join)
+				.<Result<AnyError, List<L>>>map(Result::err)
+				.orElseGet(() -> ok(values.stream()
+						.map(okMapper)
+						.toList()));
+	}
+//	static <K> Result<AnyError, List<K>> joined(final Result<AnyError, K>... results) {
+//		return Arrays.stream(results)
+//				.filter(Result::isErr)
+//				.map(r -> r.asErr().get())
+//				.reduce(AnyError::join)
+//				.<Result<AnyError, List<K>>>map(Result::err)
+//				.orElseGet(() -> ok(Arrays.stream(results).map(r -> r.asOk().get()).toList()));
+//	}
+//	static <K, J> Result<AnyError, List<J>> joined(final Function<K, J> fn, final Result<AnyError, K>... results) {
+//		return Arrays.stream(results)
+//				.filter(Result::isErr)
+//				.map(r -> r.asErr().get())
+//				.reduce(AnyError::join)
+//				.<Result<AnyError, List<J>>>map(Result::err)
+//				.orElseGet(() -> ok(Arrays.stream(results)
+//						.map(r -> r.asOk().get())
+//						.map(fn)
+//						.toList()));
+//	}
 
 	static <O> Result<AnyError, O> fail(final String errorMessage) {
 		return err(new StringError(errorMessage));
@@ -77,6 +128,7 @@ public interface AnyError {
 		@Override public String message() { return toMessage.get(); }
 		@Override
 		public ErrorList join(final AnyError that) {
+			if (that == null) return this;
 			if (that instanceof ErrorList thatList) {
 				return new ErrorList(Util.append(errors, thatList.errors));
 			} else {
