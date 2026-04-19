@@ -1,8 +1,8 @@
 package org.javafn.demo;
 
-import org.javafn.result.Result;
-import org.javafn.result.Result.Ok;
-import org.javafn.result.VoidResult;
+import org.javafn.result.legacy.Result;
+import org.javafn.result.legacy.Result.Ok;
+import org.javafn.result.legacy.VoidResult;
 
 import java.util.Arrays;
 import java.util.stream.Stream;

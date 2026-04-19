@@ -1,6 +1,6 @@
 package org.javafn.bench;
 
-import org.javafn.result.IntResult;
+import org.javafn.result.legacy.IntResult;
 
 import java.io.File;
 import java.io.FileWriter;

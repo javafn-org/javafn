@@ -1,5 +1,7 @@
 package org.javafn.result;
 
+import org.javafn.result.legacy.Result;
+import org.javafn.result.legacy.ResultCollection;
 import org.junit.Test;
 
 import java.util.UUID;

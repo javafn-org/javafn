@@ -1,7 +1,7 @@
 package org.javafn.result;
 
-import org.javafn.result.Result.Err;
-import org.javafn.result.Result.ErrProjection;
+import org.javafn.result.legacy.Result;
+import org.javafn.result.legacy.Result.Err;
 import org.javafn.util.Util;
 
 import java.io.PrintWriter;
@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.javafn.result.Result.err;
+import static org.javafn.result.legacy.Result.err;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,

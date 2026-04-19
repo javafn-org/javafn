@@ -1,6 +1,6 @@
-package org.javafn.result;
+package org.javafn.result.legacy;
 
-import org.javafn.result.VoidResultCollection.VoidResultCollector;
+import org.javafn.result.legacy.VoidResultCollection.VoidResultCollector;
 
 import java.util.Arrays;
 import java.util.Collections;

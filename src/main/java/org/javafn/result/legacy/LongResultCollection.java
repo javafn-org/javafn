@@ -1,4 +1,4 @@
-package org.javafn.result;
+package org.javafn.result.legacy;
 
 import java.util.ArrayList;
 import java.util.Arrays;

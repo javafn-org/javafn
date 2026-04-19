@@ -1,4 +1,4 @@
-package org.javafn.result;
+package org.javafn.result.legacy;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -89,99 +89,99 @@ public class Try {
         return Result.ok(o);
     }
 
-//    public static IntResult<Exception> getInt(final IntThrowingSupplier fn) {
-//        final int i;
-//        try {
-//            i = fn.get();
-//        } catch (final Exception e) {
-//            return IntResult.err(e);
-//        }
-//        return IntResult.ok(i);
-//    }
-//    public static LongResult<Exception> getLong(final LongThrowingSupplier fn) {
-//        final long l;
-//        try {
-//            l = fn.get();
-//        } catch (final Exception e) {
-//            return LongResult.err(e);
-//        }
-//        return LongResult.ok(l);
-//    }
-//    public static DoubleResult<Exception> getDouble(final DoubleThrowingSupplier fn) {
-//        final double d;
-//        try {
-//            d = fn.get();
-//        } catch (final Exception e) {
-//            return DoubleResult.err(e);
-//        }
-//        return DoubleResult.ok(d);
-//    }
-//
-//    /**
-//     * Try to call the supplied runnable.  If an exception is thrown, return an Err, otherwise,
-//     * return a Void Ok.
-//     * <pre>{@code
-//     * final OutputStream out = ...;
-//     * final Result<Exception, Void> res = Result.tryDo(() -> out.flush());
-//     * }</pre>
-//     * As with {@link #get(ThrowingSupplier)}, the real value is when this is used in streams.
-//     * <pre>{@code
-//     * final FileOutputStreams[] openFiles = ...;
-//     * final int errCount = Arrays.stream(openFiles)
-//     *     .map(file -> Try.run(() -> file.close()))
-//     *     .filter(Result::isErr)
-//     *     .count();
-//     * System.out.println(errCount + " files failed to close.");
-//     * }</pre>
-//     * @param fn the Runnable that can throw an exception
-//     */
-//    public static VoidResult<Exception> run(final ThrowingRunnable fn) {
-//        try {
-//            fn.run();
-//        } catch (final Exception e) {
-//            return VoidResult.err(e);
-//        }
-//        return VoidResult.ok();
-//    }
-//
-//    public static Supplier<VoidResult<Exception>> Run(final ThrowingRunnable fn) {
-//        return () -> run(fn);
-//    }
-//
-//    /**
-//     * Return a function that can be used as an argument to {@link Stream#map(Function)} which accepts the
-//     * map argument and passes it to a lambda that can throw an exception.
-//     * If an exception is thrown, return an Err, otherwise, a Void Ok is returned.
-//     * <pre>{@code
-//     * final FileOutputStreams[] openFiles = ...;
-//     * final int errCount = Arrays.stream(openFiles)
-//     *     .map(Try.Accept(file -> file.close()))
-//     *     .filter(Result::isErr)
-//     *     .count();
-//     * System.out.println(errCount + " files failed to close.");
-//     * }</pre>
-//     * Compare this to {@link #run(ThrowingRunnable)},
-//     * which executes and returns a Result, this function RETURNS A FUNCTION.
-//     * Its intended use is in a stream.  Instead of passing a lambda that calls Try.*,
-//     * this function generates the lambda.
-//     * Notice the similarity between
-//     * <pre>{@code
-//     *     .map(Try.Accept(foo -> foo.bar()))
-//     *     .map(foo -> Try.run(() -> foo.bar()))
-//     * }</pre>
-//     * This function is essentially syntactic sugar for {@link #run(ThrowingRunnable)}.
-//     * @param fn the consumer that can throw an exception
-//     */
-//    public static <T> Function<T, VoidResult<Exception>> Accept(final ThrowingConsumer<T> fn) {
-//        return t -> {
-//            try {
-//                fn.accept(t);
-//            } catch (final Exception e) {
-//                return VoidResult.err(e);
-//            }
-//            return VoidResult.ok();
-//        };
-//    }
+    public static IntResult<Exception> getInt(final IntThrowingSupplier fn) {
+        final int i;
+        try {
+            i = fn.get();
+        } catch (final Exception e) {
+            return IntResult.err(e);
+        }
+        return IntResult.ok(i);
+    }
+    public static LongResult<Exception> getLong(final LongThrowingSupplier fn) {
+        final long l;
+        try {
+            l = fn.get();
+        } catch (final Exception e) {
+            return LongResult.err(e);
+        }
+        return LongResult.ok(l);
+    }
+    public static DoubleResult<Exception> getDouble(final DoubleThrowingSupplier fn) {
+        final double d;
+        try {
+            d = fn.get();
+        } catch (final Exception e) {
+            return DoubleResult.err(e);
+        }
+        return DoubleResult.ok(d);
+    }
+
+    /**
+     * Try to call the supplied runnable.  If an exception is thrown, return an Err, otherwise,
+     * return a Void Ok.
+     * <pre>{@code
+     * final OutputStream out = ...;
+     * final Result<Exception, Void> res = Result.tryDo(() -> out.flush());
+     * }</pre>
+     * As with {@link #get(ThrowingSupplier)}, the real value is when this is used in streams.
+     * <pre>{@code
+     * final FileOutputStreams[] openFiles = ...;
+     * final int errCount = Arrays.stream(openFiles)
+     *     .map(file -> Try.run(() -> file.close()))
+     *     .filter(Result::isErr)
+     *     .count();
+     * System.out.println(errCount + " files failed to close.");
+     * }</pre>
+     * @param fn the Runnable that can throw an exception
+     */
+    public static VoidResult<Exception> run(final ThrowingRunnable fn) {
+        try {
+            fn.run();
+        } catch (final Exception e) {
+            return VoidResult.err(e);
+        }
+        return VoidResult.ok();
+    }
+
+    public static Supplier<VoidResult<Exception>> Run(final ThrowingRunnable fn) {
+        return () -> run(fn);
+    }
+
+    /**
+     * Return a function that can be used as an argument to {@link Stream#map(Function)} which accepts the
+     * map argument and passes it to a lambda that can throw an exception.
+     * If an exception is thrown, return an Err, otherwise, a Void Ok is returned.
+     * <pre>{@code
+     * final FileOutputStreams[] openFiles = ...;
+     * final int errCount = Arrays.stream(openFiles)
+     *     .map(Try.Accept(file -> file.close()))
+     *     .filter(Result::isErr)
+     *     .count();
+     * System.out.println(errCount + " files failed to close.");
+     * }</pre>
+     * Compare this to {@link #run(Try.ThrowingRunnable)},
+     * which executes and returns a Result, this function RETURNS A FUNCTION.
+     * Its intended use is in a stream.  Instead of passing a lambda that calls Try.*,
+     * this function generates the lambda.
+     * Notice the similarity between
+     * <pre>{@code
+     *     .map(Try.Accept(foo -> foo.bar()))
+     *     .map(foo -> Try.run(() -> foo.bar()))
+     * }</pre>
+     * This function is essentially syntactic sugar for {@link #run(ThrowingRunnable)}.
+     * @param fn the consumer that can throw an exception
+     */
+    public static <T> Function<T, VoidResult<Exception>> Accept(final Try.ThrowingConsumer<T> fn) {
+        return t -> {
+            try {
+                fn.accept(t);
+            } catch (final Exception e) {
+                return VoidResult.err(e);
+            }
+            return VoidResult.ok();
+        };
+    }
 
     /**
      * Return a function that can be used as an argument to {@link Stream#map(Function)} which accepts the
@@ -196,7 +196,7 @@ public class Try {
      *     .count();
      * System.out.println("There are " + errCount + " bad numbers in the supplied array.");
      * }</pre>
-     * Compare this to {@link #get(ThrowingSupplier)}
+     * Compare this to {@link #get(Try.ThrowingSupplier)}
      * which executes and returns a Result, this function RETURNS A FUNCTION.
      * Its intended use is in a stream.  Instead of passing a lambda that calls Try.*,
      * this function generates the lambda.
@@ -208,7 +208,7 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #get(ThrowingSupplier)}.
      * @param fn the mapping function that can throw an exception
      */
-    public static <T, U> Function<T, Result<Exception, U>> Map(final ThrowingFunction<T, U> fn) {
+    public static <T, U> Function<T, Result<Exception, U>> Map(final Try.ThrowingFunction<T, U> fn) {
         return t -> {
             final U u;
             try {

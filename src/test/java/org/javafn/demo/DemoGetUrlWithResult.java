@@ -1,6 +1,6 @@
 package org.javafn.demo;
 
-import org.javafn.result.Try;
+import org.javafn.result.legacy.Try;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;

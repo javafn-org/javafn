@@ -1,9 +1,9 @@
-package org.javafn.result;
+package org.javafn.result.legacy;
 
+import org.javafn.result.AnyError;
 import org.javafn.result.AnyError.ErrorList;
-import org.javafn.result.AnyError.ExceptionError;
-import org.javafn.result.Result.Err;
-import org.javafn.result.Result.Ok;
+import org.javafn.result.legacy.Result.Err;
+import org.javafn.result.legacy.Result.Ok;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,8 +15,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static org.javafn.result.Result.err;
-import static org.javafn.result.Result.ok;
+import static org.javafn.result.legacy.Result.err;
+import static org.javafn.result.legacy.Result.ok;
 
 /**
  * Build an object from fields where getting the field may produce errors, for example,
@@ -97,7 +97,7 @@ public class ResultBuilder<B> {
 	private final List<AnyError> errors = new ArrayList<>();
 	private final List<TypedValue<?,?,?>> oks = new ArrayList<>();
 
-	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<Result<AnyError, T>>fn) {
+	public <T> ResultBuilder<B> with(final TypedField<T> field, Try.ThrowingSupplier<Result<AnyError, T>> fn) {
 		final Result<AnyError, T> res = Try.get(fn)
 				.asErr().map(AnyError::from)
 				.asOk().flatMap(Function.identity());

@@ -2,7 +2,7 @@ package org.javafn.demo;
 
 import org.javafn.either.Either;
 import org.javafn.either.Either.Right;
-import org.javafn.result.Result;
+import org.javafn.result.legacy.Result;
 
 import java.util.function.Function;
 

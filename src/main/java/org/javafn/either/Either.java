@@ -1,6 +1,6 @@
 package org.javafn.either;
 
-import org.javafn.result.Result;
+import org.javafn.result.legacy.Result;
 
 import java.util.List;
 import java.util.NoSuchElementException;

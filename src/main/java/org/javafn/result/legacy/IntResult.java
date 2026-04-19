@@ -1,7 +1,6 @@
-package org.javafn.result;
+package org.javafn.result.legacy;
 
-import org.javafn.result.IntResultCollection.IntResultCollector;
-import org.javafn.result.Result.ErrProjection;
+import org.javafn.result.legacy.IntResultCollection.IntResultCollector;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -11,8 +10,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
-import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.function.IntConsumer;
 import java.util.function.IntFunction;

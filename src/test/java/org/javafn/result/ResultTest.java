@@ -1,9 +1,10 @@
 package org.javafn.result;
 
-import org.javafn.either.Either;
-import org.javafn.either.Either.Right;
-import org.javafn.result.Result.Err;
-import org.javafn.result.Result.Ok;
+import org.javafn.result.legacy.Result;
+import org.javafn.result.legacy.Result.Err;
+import org.javafn.result.legacy.Result.Ok;
+import org.javafn.result.legacy.Try;
+import org.javafn.result.legacy.VoidResult;
 import org.junit.Test;
 
 import java.util.Arrays;

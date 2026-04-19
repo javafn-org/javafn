@@ -1,8 +1,7 @@
-package org.javafn.result;
+package org.javafn.result.legacy;
 
 
-import org.javafn.result.DoubleResultCollection.DoubleResultCollector;
-import org.javafn.result.Result.ErrProjection;
+import org.javafn.result.legacy.DoubleResultCollection.DoubleResultCollector;
 
 import java.util.Arrays;
 import java.util.Collections;
