@@ -374,24 +374,24 @@ public sealed interface Either<L, R> permits Either.Left, Either.Right {
 	}
 
 	final class Lefts {
-		public <L, R, Z> Function<Either<L, R>, Either<Z, R>> map(final Function<L, Z> fn) {
+		public static <L, R, Z> Function<Either<L, R>, Either<Z, R>> map(final Function<L, Z> fn) {
 			return res -> res.mapLeft(fn);
 		}
 
-		public <L, R> Predicate<Either<L, R>> filter(final Predicate<L> fn) {
+		public static <L, R> Predicate<Either<L, R>> filter(final Predicate<L> fn) {
 			return res -> res.filterLeft(fn);
 		}
 
-		public <L, R> Function<Either<L, R>, Either<L, R>> toRightIf(
+		public static <L, R> Function<Either<L, R>, Either<L, R>> toRightIf(
 				final Predicate<L> testFn, final Function<L, R> mapFn) {
 			return res -> res.toRightIf(testFn, mapFn);
 		}
 
-		public <L, R> Function<Either<L, R>, Either<R, L>> swap() {
+		public static <L, R> Function<Either<L, R>, Either<R, L>> swap() {
 			return Either::swap;
 		}
 
-		public <L, R> Consumer<Either<L, R>> ifLeft(final Consumer<L> fn) {
+		public static <L, R> Consumer<Either<L, R>> ifLeft(final Consumer<L> fn) {
 			return res -> res.ifLeft(fn);
 		}
 
@@ -401,24 +401,24 @@ public sealed interface Either<L, R> permits Either.Left, Either.Right {
 	}
 
 	final class Rights {
-		public <L, R, Z> Function<Either<L, R>, Either<L, Z>> map(final Function<R, Z> fn) {
+		public static <L, R, Z> Function<Either<L, R>, Either<L, Z>> map(final Function<R, Z> fn) {
 			return res -> res.mapRight(fn);
 		}
 
-		public <L, R> Predicate<Either<L, R>> filter(final Predicate<R> fn) {
+		public static <L, R> Predicate<Either<L, R>> filter(final Predicate<R> fn) {
 			return res -> res.filterRight(fn);
 		}
 
-		public <L, R> Function<Either<L, R>, Either<L, R>> toLeftIf(
+		public static <L, R> Function<Either<L, R>, Either<L, R>> toLeftIf(
 				final Predicate<R> testFn, final Function<R, L> mapFn) {
 			return res -> res.toLeftIf(testFn, mapFn);
 		}
 
-		public <L, R> Function<Either<L, R>, Either<R, L>> swap() {
+		public static <L, R> Function<Either<L, R>, Either<R, L>> swap() {
 			return Either::swap;
 		}
 
-		public <L, R> Consumer<Either<L, R>> ifRight(final Consumer<R> fn) {
+		public static <L, R> Consumer<Either<L, R>> ifRight(final Consumer<R> fn) {
 			return res -> res.ifRight(fn);
 		}
 

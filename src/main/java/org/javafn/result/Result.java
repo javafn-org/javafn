@@ -514,24 +514,24 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * Namely, the text {@code res -> res} is repeated to the point of becoming noise.
      */
     final class Errs {
-        public <ERR, OK, Z> Function<Result<ERR, OK>, Result<Z, OK>> map(final Function<ERR, Z> fn) {
+        public static <ERR, OK, Z> Function<Result<ERR, OK>, Result<Z, OK>> map(final Function<ERR, Z> fn) {
             return res -> res.mapErr(fn);
         }
 
-        public <ERR, OK> Predicate<Result<ERR, OK>> filter(final Predicate<ERR> fn) {
+        public static <ERR, OK> Predicate<Result<ERR, OK>> filter(final Predicate<ERR> fn) {
             return res -> res.filterErr(fn);
         }
 
-        public <ERR, OK> Function<Result<ERR, OK>, Result<ERR, OK>> recoverIf(
+        public static <ERR, OK> Function<Result<ERR, OK>, Result<ERR, OK>> recoverIf(
                 final Predicate<ERR> testFn, final Function<ERR, OK> mapFn) {
             return res -> res.recoverIf(testFn, mapFn);
         }
 
-        public <ERR, OK> Function<Result<ERR, OK>, Result<OK, ERR>> swap() {
+        public static <ERR, OK> Function<Result<ERR, OK>, Result<OK, ERR>> swap() {
             return Result::swap;
         }
 
-        public <ERR, OK> Consumer<Result<ERR, OK>> ifErr(final Consumer<ERR> fn) {
+        public static <ERR, OK> Consumer<Result<ERR, OK>> ifErr(final Consumer<ERR> fn) {
             return res -> res.ifErr(fn);
         }
 
@@ -564,28 +564,28 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * Namely, the text {@code res -> res} is repeated to the point of becoming noise.
      */
     final class Oks {
-        public <ERR, OK, Z> Function<Result<ERR, OK>, Result<ERR, Z>> map(final Function<OK, Z> fn) {
+        public static <ERR, OK, Z> Function<Result<ERR, OK>, Result<ERR, Z>> map(final Function<OK, Z> fn) {
             return res -> res.mapOk(fn);
         }
 
-        public <ERR, OK> Predicate<Result<ERR, OK>> filter(final Predicate<OK> fn) {
+        public static <ERR, OK> Predicate<Result<ERR, OK>> filter(final Predicate<OK> fn) {
             return res -> res.filterOk(fn);
         }
 
-        public <ERR, OK> Function<Result<ERR, OK>, Result<ERR, OK>> failIf(
+        public static <ERR, OK> Function<Result<ERR, OK>, Result<ERR, OK>> failIf(
                 final Predicate<OK> testFn, final Function<OK, ERR> mapFn) {
             return res -> res.failIf(testFn, mapFn);
         }
 
-        public <ERR, OK, Z> Function<Result<ERR, OK>, Result<ERR, Z>> flatMap(final Function<OK, Result<ERR, Z>> fn) {
+        public static <ERR, OK, Z> Function<Result<ERR, OK>, Result<ERR, Z>> flatMap(final Function<OK, Result<ERR, Z>> fn) {
             return res -> res.flatMap(fn);
         }
 
-        public <ERR, OK> Function<Result<ERR, OK>, Result<OK, ERR>> swap() {
+        public static <ERR, OK> Function<Result<ERR, OK>, Result<OK, ERR>> swap() {
             return Result::swap;
         }
 
-        public <ERR, OK> Consumer<Result<ERR, OK>> ifOk(final Consumer<OK> fn) {
+        public static <ERR, OK> Consumer<Result<ERR, OK>> ifOk(final Consumer<OK> fn) {
             return res -> res.ifOk(fn);
         }
 
