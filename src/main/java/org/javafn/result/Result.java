@@ -24,8 +24,7 @@ import java.util.function.Predicate;
  *              + lines.collect(Collectors.joining("\n"))));
  * }</pre>
  * This class is heavily inspired by Rust's Result type
- * <a href="https://doc.rust-lang.org/std/result/">https://doc.rust-lang.org/std/result/</a>
- * </a>.
+ * <a href="https://doc.rust-lang.org/std/result/">https://doc.rust-lang.org/std/result/</a>.
  *
  * @param <ERR> the type of value stored if this is an err
  * @param <OK>  the type of value stored if this is an ok
