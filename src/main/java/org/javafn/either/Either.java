@@ -277,6 +277,8 @@ public sealed interface Either<L, R> permits Either.Left, Either.Right {
 	 */
 	<Z> Z reduce(Function<L, Z> fnLeft, Function<R, Z> fnRight);
 
+	void use(Consumer<L> fnLeft, Consumer<R> fnRight);
+
 	/**
 	 * Swap the type parameters and convert this into the opposing type.
 	 */
@@ -322,6 +324,7 @@ public sealed interface Either<L, R> permits Either.Left, Either.Right {
 		}
 
 		@Override public <Z> Z reduce(Function<L, Z> fnLeft, Function<R, Z> fnRight) { return fnLeft.apply(value); }
+		@Override public void use(final Consumer<L> fnLeft, final Consumer<R> fnRight) { fnLeft.accept(value); }
 
 		@Override public Either<R, L> swap() { return right(value); }
 	}
@@ -369,6 +372,8 @@ public sealed interface Either<L, R> permits Either.Left, Either.Right {
 		@Override public <Z> Z reduce(final Function<L, Z> fnLeft, final Function<R, Z> fnRight) {
 			return fnRight.apply(value);
 		}
+
+		@Override public void use(final Consumer<L> fnLeft, final Consumer<R> fnRight) { fnRight.accept(value); }
 
 		@Override public Either<R, L> swap() { return left(value); }
 	}

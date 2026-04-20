@@ -320,6 +320,8 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      */
     <Z> Z reduce(Function<ERR, Z> fnErr, Function<OK, Z> fnOk);
 
+    void use(Consumer<ERR> fnErr, Consumer<OK> fnOk);
+
     /**
      * Swap the type parameters and convert this into the opposing type.
      */
@@ -404,6 +406,9 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
         @Override public <Z> Result<ERR, Z> flatMap(final Function<OK, Result<ERR, Z>> fn) { return err(value); }
 
         @Override public <Z> Z reduce(Function<ERR, Z> fnErr, Function<OK, Z> fnOk) { return fnErr.apply(value); }
+        @Override public void use(final Consumer<ERR> fnErr, final Consumer<OK> fnOk) {
+            fnErr.accept(value);
+        }
 
         @Override public Result<OK, ERR> swap() { return ok(value); }
     }
@@ -485,6 +490,10 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
 
         @Override public <Z> Z reduce(final Function<ERR, Z> fnErr, final Function<OK, Z> fnOk) {
             return fnOk.apply(value);
+        }
+
+        @Override public void use(final Consumer<ERR> fnErr, final Consumer<OK> fnOk) {
+            fnOk.accept(value);
         }
 
         @Override public Result<OK, ERR> swap() { return err(value); }
