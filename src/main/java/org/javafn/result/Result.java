@@ -38,6 +38,15 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
     static <ERR, OK> Result<ERR, OK> ok(final OK ok) {
         return new Ok<>(ok);
     }
+    /**
+     * Create a new Result indicating success with no associated value.
+     * A Void typed Ok result is similar to {@code Optional<ErrorType>} with the added semantics
+     * that a present value indicates an error and lack of a value indicates success, which is not clear
+     * purely from the API when an Optional is used.
+     */
+    static <ERR> Result<ERR, Void> ok() {
+        return new Ok<>(null);
+    }
 
     /** Create a new Result wrapping an error value. */
     static <ERR, OK> Result<ERR, OK> err(final ERR err) {
@@ -111,7 +120,7 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * @param thiz the same object this method is being called on after performing a pattern match
      * @return this with the type parameters restored
      * @throws IllegalArgumentException if the parameter is anything except the method receiver
-     * @see Ok#get()
+     * @see Ok#value()
      * @see Ok#into()
      */
     default Ok<ERR, OK> as(Ok<?, ?> thiz) {

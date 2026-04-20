@@ -1,8 +1,7 @@
 package org.javafn.result;
 
-import org.javafn.result.legacy.Result;
-import org.javafn.result.legacy.Result.Err;
-import org.javafn.util.Util;
+import org.javafn.result.Result.Err;
+import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -10,7 +9,7 @@ import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import static org.javafn.result.legacy.Result.err;
+import static org.javafn.result.Result.err;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,
@@ -80,9 +79,9 @@ public interface AnyError {
 		public ErrorList join(final AnyError that) {
 			if (that == null) return this;
 			if (that instanceof ErrorList thatList) {
-				return new ErrorList(Util.append(errors, thatList.errors));
+				return new ErrorList(Data.append(errors, thatList.errors));
 			} else {
-				return new ErrorList(Util.append(errors, that));
+				return new ErrorList(Data.append(errors, that));
 			}
 		}
 	}
@@ -103,7 +102,7 @@ public interface AnyError {
 			this((E) x, (Class<E>) x.getClass());
 		}
 		public ExceptionError(final Err<E, ?> x) {
-			this(x.get());
+			this(x.value());
 		}
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();

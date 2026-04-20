@@ -1,521 +1,429 @@
 package org.javafn.either;
 
-import org.javafn.result.legacy.Result;
-
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
- * This type represents a value of one or another type, but never both.  `null` is a valid value,
- * however the null value will be of one type and the opposing type will be empty.
- * See {@link Left} and {@link Right} for a number of static methods useful in streams.
- * This class assigns no priority of one type over the other, whereas in other languages,
- * a Left type typically refers to an error and the Right a success.  This class is for
- * values which whose type may either of two types, with both being equally valid.
- * For representing success and errors, see the {@link Result} type which is effectively
- * the same implementation but with the added semantics.
+ * An algebraic sum type that represents one of two possible values, neither of which is "better" than the other.
+ *
+ * <pre>{@code
+ * final Either<Km, In> dist = ...;
+ * final Meters dm = dist.reduce(
+ *      km -> new Meters(km / 1000),
+ *      inches -> new Meters(inches * 0.0254));
+ * }</pre>
+ * This class is very nearly identical to the {@link org.javafn.result.Result} class with a few minor exceptions.
+ * In order to reduce documentation drift, this class is not heavily documented.  Refer to the Result documentation,
+ * treating Left values as Errs and Right values as Oks.
  */
-public abstract class Either<LEFT, RIGHT> {
+public sealed interface Either<L, R> permits Either.Left, Either.Right {
 
-    /**
-     * Project an Either as a Left or a Right.  Similar to an optional,
-     * operations on a projection either apply to the wrapped component,
-     * or if the component is empty (i.e., it is the opposing type),
-     * no operation is performed.
-     * @param <T> the type of this projection
-     * @param <O> the type of the opposite projection
-     * @param <L> the type of the left element, which will be either T or O
-     * @param <R> the type of the right element, which will either be T or O
-     */
-    public interface Projection<T, O, L, R> {
-        /**
-         * Get the element or throw a NoSuchElementException
-         */
-        T get();
-        /**
-         * Get the element, supplying a function to generate an exception
-         * if this Either was projected to the wrong type.
-         */
-        T orElseThrow(Function<O, RuntimeException> exceptionMapper);
+    /** Create a new Either wrapping a Right value. */
+	static <L, R> Either<L, R> right(final R right) {
+		return new Right<>(right);
+	}
 
-        /**
-         * Get this element, or if this Either is projected to the wrong type, map the other element to this element's
-         * type and return that instead.
-         */
-        T orElseMap(Function<O, T> fn);
+	/** Create a new Either wrapping a Left value. */
+	static <L, R> Either<L, R> left(final L left) {
+		return new Left<>(left);
+	}
 
-        /**
-         * Get this element wrapped in an optional or an empty optional if this Either was projected to the wrong type.
-         */
-        Optional<T> opt();
+	/**
+	 * After performing an instanceof check, turn this Either into a concrete Left type.
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either instanceof Left<?, ?> l) {
+	 *     final Left<LType, RType> left = either.as(l);
+	 *     final LType value = left.value();
+	 * }
+	 * }</pre>
+	 * You may be inclined to cast your either and pass it to this method, for example
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either.isLeft()) {
+	 *     final Left<LType, RType> left = either.as((Left<?, ?>) either);
+	 *     final LType value = left.value();
+	 * }
+	 * }</pre>
+	 * This is syntactically legal, but there are easier ways to do this.
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either.isLeft()) {
+	 *     final LType value = either.expectLeft();
+	 * }
+	 * }</pre>
+	 * You should never use the cast approach and treat its legality as an oddity.
+	 * This is the only safe way to obtain a Left object from an either, which defines several additional
+	 * methods that can not be safely implemented on an either.
+	 * @param thiz the same object this method is being called on after performing a pattern match
+	 * @return this with the type parameters restored
+	 * @throws IllegalArgumentException if the parameter is anything except the method receiver
+	 * @see Left#value()
+	 * @see Left#into()
+	 */
+	default Left<L, R> as(Left<?, ?> thiz) {
+		throw new IllegalArgumentException("as(Left) called on non-Left instance; use instanceof Left and its pattern variable");
+	}
 
-        /**
-         * Apply the supplied predicate if this projection is not empty, otherwise return true.
-         * The semantics for this can be thought of as a boolean OR: (this.isEmpty OR either(this.value)).
-         */
-        boolean filter(Predicate<T> fn);
-        /**
-         * Apply the function to the wrapped element or no op if this Either was projected to the wrong type.
-         */
-        Either<L, R> peek(Consumer<T> fn);
+	/**
+	 * After performing an instanceof check, turn this Either into a concrete Right type.
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either instanceof Right<?, ?> o) {
+	 *     final Right<LType, String> right = either.as(o);
+	 *     final String value = right.value();
+	 * }
+	 * }</pre>
+	 * You may be inclined to cast your either and pass it to this method, for example
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either.isRight()) {
+	 *     final Right<LType, String> right = either.as((Right<?, ?>) either);
+	 *     final String value = right.value();
+	 * }
+	 * }</pre>
+	 * This is syntactically legal, but there are easier ways to do this.
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either.isRight()) {
+	 *     final String value = either.expectRight();
+	 * }
+	 * }</pre>
+	 * You should never use the cast approach and treat its legality as an oddity.
+	 * This is the only safe way to obtain a Right object from an either, which defines several additional
+	 * methods that can not be safely implemented on an either.
+	 * @param thiz the same object this method is being called on after performing a pattern match
+	 * @return this with the type parameters restored
+	 * @throws IllegalArgumentException if the parameter is anything except the method receiver
+	 * @see Right#value()
+	 * @see Right#into()
+	 */
+	default Right<L, R> as(Right<?, ?> thiz) {
+		throw new IllegalArgumentException("as(Right) called on non-Right instance; use instanceof Right and its pattern variable");
+	}
 
-        /**
-         * Apply the predicate to this element and map it to the other type if it returns true, or if this is
-         * already the other type, return it unmodified.
-         */
-        Either<L, R> filterMap(Predicate<T> p, Function<T, O> fn);
+	/**
+	 * Return true if this is a left variant, false otherwise.  This function is useful in a stream pipeline.
+	 * More general usage would involve an instanceof check with pattern matching followed by {@link #as(Left)}.
+	 * @return true iff this is a left variant
+	 */
+	default boolean isLeft() { return false; }
 
-        /**
-         * Get the wrapped element as a single element stream, or if it's projected to the wrong type,
-         * return an empty stream.
-         */
-        Stream<T> stream();
-    }
+	/**
+	 * Return true if this is a right variant, false otherwise.  This function is useful in a stream pipeline.
+	 * More general usage would involve an instanceof check with pattern matching followed by {@link #as(Right)}.
+	 * @return true iff this is a right variant
+	 */
+	default boolean isRight() { return false; }
 
-    /**
-     * A {@link Projection} of an Either as a Left value, which may or may not be present.
-     */
-    public interface Left<L, R> extends Projection<L, R, L, R> {
-        /**
-         * Map this left projection and return a new Either with a new type for the Left component,
-         * or if this is a Right either, return a new Either with the same right element but a new type
-         * for the left element.
-         */
-        <Z> Either<Z, R> map(Function<L, Z> fn);
+	/**
+	 * Unsafe operation, only safe in a branch opposite a test against right.
+	 * Access the left value or throw an exception.
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either instanceof Right<?,?> o) {
+	 *     ... // do something with right
+	 * } else {
+	 *     LType e = either.expectLeft();
+	 * }
+	 * }</pre>
+	 * @return the left value in this Either
+	 * @throws IllegalStateException if this Either is not actually a Left
+	 */
+	default L expectLeft() {
+		throw new IllegalStateException("Expected Either to be a Left instance, but it was not");
+	}
 
-        /**
-         * Map this left projection by calling a function that itself returns an Either.
-         * If the left is present, the function is called and the resulting either is returned.
-         * If this is a right either, return a new either with the same right element but a new
-         * type for the left element.
-         */
-        <Z> Either<Z, R> flatMap(Function<L, Either<Z, R>> fn);
+	/**
+	 * Unsafe operation, only safe in a branch opposite a test against left.
+	 * Access the right value or throw an exception.
+	 * <pre>{@code
+	 * final Either<LType, RType> either = ...;
+	 * if (either instanceof Left<?,?> e) {
+	 *     return either.as(e).into();
+	 * }
+	 * final String value = either.expectRight();
+	 * }</pre>
+	 * @return the right value in this Either
+	 * @throws IllegalStateException if this Either is not actually a Right
+	 */
+	default R expectRight() {
+		throw new IllegalStateException("Expected Either to be a Right instance, but it was not");
+	}
 
-        /**
-         * Accept a list of L values and return a List of Either.left objects each wrapping a value from the input list.
-         * @param l a list of bare left values
-         * @return a list of Eithers, each wrapping a single left value
-         * @param <LL> the left type
-         * @param <RR> the right type
-         */
-        static <LL, RR> List<Either<LL, RR>> Wrap(List<LL> l) {
-            return l.stream().map(Either::<LL, RR>ofLeft).collect(Collectors.toList());
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and calls {@link Left#map(Function)} with
-         * the supplied function.
-         */
-        static <Z, LL, RR> Function<Either<LL, RR>, Either<Z, RR>> Map(Function<LL, Z> fn) {
-            return either -> either.asLeft().map(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and calls {@link Left#flatMap(Function)}
-         * with the supplied function.
-         */
-        static <LL, RR, ZZ> Function<Either<LL, RR>, Either<ZZ, RR>> FlatMap(Function<LL, Either<ZZ, RR>> fn) {
-            return either -> either.asLeft().flatMap(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and returns the result of calling
-         * {@link Projection#get()} on it.
-         */
-        static <LL, RR> Function<Either<LL, RR>, LL> Get() {
-            return either -> either.asLeft().get();
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left,
-         * and calls {@link Projection#orElseMap(Function)} with the supplied function.
-         */
-        static <LL, RR> Function<Either<LL, RR>, LL> OrElseMap(Function<RR, LL> fn) {
-            return either -> either.asLeft().orElseMap(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left,
-         * and calls {@link Projection#orElseThrow(Function)} with the supplied exception supplier.
-         */
-        static <LL, RR> Function<Either<LL, RR>, LL> OrElseThrow(Function<RR, RuntimeException> exceptionMapper) {
-            return either -> either.asLeft().orElseThrow(exceptionMapper);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and calls {@link Projection#opt()}.
-         */
-        static <LL, RR> Function<Either<LL, RR>, Optional<LL>> Opt() {
-            return either -> either.asLeft().opt();
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left,
-         * and calls {@link Projection#filter(Predicate)} with the supplied filter.
-         */
-        static <LL, RR> Predicate<Either<LL, RR>> Filter(Predicate<LL> fn) {
-            return either -> either.asLeft().filter(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left,
-         * and calls {@link Projection#peek(Consumer)} with the supplied consumer.
-         */
-        static <LL, RR> Consumer<Either<LL, RR>> Peek(Consumer<LL> fn) { return either -> either.asLeft().peek(fn); }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and calls
-         * {@link Projection#filterMap(Predicate, Function)} with the supplied predicate and function.
-         */
-        static <LL, RR> Function<Either<LL, RR>, Either<LL, RR>> FilterMap(Predicate<LL> p, Function<LL, RR> fn) {
-            return either -> either.asLeft().filterMap(p, fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and calls {@link Projection#stream()}.
-         */
-        static <LL, RR> Function<Either<LL, RR>, Stream<LL>> Stream() { return either -> either.asLeft().stream(); }
-    }
+	/**
+	 * Get the non-null left value of this either wrapped in an optional, or an empty optional if this either
+	 * is not a left or the wrapped left value is null.
+	 */
+	default Optional<L> optLeft() {
+		return Optional.empty();
+	}
 
-    /**
-     * A {@link Projection} of an Either as a Right value, which may or may not be present.
-     */
-    public interface Right<L, R> extends Projection<R, L, L, R> {
-        /**
-         * Map this right projection and return a new Either with a new type for the right component,
-         * or if this is a Left either, return a new Either with the same left element but a new type
-         * for the right element.
-         */
-        <Z> Either<L, Z> map(Function<R, Z> fn);
-        /**
-         * Map this right projection by calling a function that itself returns an Either.
-         * If the right is present, the function is called and the resulting either is returned.
-         * If this is a left either, return a new either with the same left element but a new
-         * type for the right element.
-         */
-        <Z> Either<L, Z> flatMap(Function<R, Either<L, Z>> fn);
+	/**
+	 * Get the non-null right value of this result wrapped in an optional, or an empty optional if this result
+	 * is not a right or the wrapped right value is null.
+	 */
+	default Optional<R> optRight() {
+		return Optional.empty();
+	}
 
-        /**
-         * Accept a list of R values and return a List of Either.right objects each wrapping a value from the input list.
-         * @param r a list of bare right values
-         * @return a list of Eithers, each wrapping a single right value
-         * @param <LL> the left type
-         * @param <RR> the right type
-         */
-        static <LL, RR> List<Either<LL, RR>> Wrap(List<RR> r) {
-            return r.stream().map(Either::<LL, RR>ofRight).collect(Collectors.toList());
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Right, and calls {@link Right#map(Function)}
-         * with the supplied function.
-         */
-        static <Z, LL, RR> Function<Either<LL, RR>, Either<LL, Z>> Map(Function<RR, Z> fn) {
-            return either -> either.asRight().map(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Right, and calls {@link Right#flatMap(Function)}
-         * with the supplied function.
-         */
-        static <LL, RR, ZZ> Function<Either<LL, RR>, Either<LL, ZZ>> FlatMap(Function<RR, Either<LL, ZZ>> fn) {
-            return either -> either.asRight().flatMap(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Left, and returns the result of calling
-         * {@link Projection#get()} on it.
-         */
-        static <LL, RR> Function<Either<LL, RR>, RR> Get() { return either -> either.asRight().get(); }
-        /**
-         * Return a function that accepts an either, projects it to the Right,
-         * and calls {@link Projection#orElseThrow(Function)} with the supplied exception supplier.
-         */
-        static <LL, RR> Function<Either<LL, RR>, RR> OrElseThrow(Function<LL, RuntimeException> exceptionSupplier) {
-            return either -> either.asRight().orElseThrow(exceptionSupplier);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Right, and calls {@link Projection#opt()}.
-         */
-        static <LL, RR> Function<Either<LL, RR>, Optional<RR>> Opt() { return either -> either.asRight().opt(); }
-        /**
-         * Return a function that accepts an either, projects it to the Right,
-         * and calls {@link Projection#filter(Predicate)} with the supplied predicate.
-         */
-        static <LL, RR> Predicate<Either<LL, RR>> Filter(Predicate<RR> fn) {
-            return either -> either.asRight().filter(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Right,
-         * and calls {@link Projection#peek(Consumer)} with the supplied consumer.
-         */
-        static <LL, RR> Consumer<Either<LL, RR>> Peek(Consumer<RR> fn) { return either -> either.asRight().peek(fn); }
-        /**
-         * Return a function that accepts an either, projects it to the Right,
-         * and calls {@link Projection#orElseMap(Function)} with the supplied function.
-         */
-        static <LL, RR> Function<Either<LL, RR>, RR> OrElseMap(Function<LL, RR> fn) {
-            return either -> either.asRight().orElseMap(fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Right, and calls
-         * {@link Projection#filterMap(Predicate, Function)} with the supplied predicate and mapping function.
-         */
-        static <LL, RR> Function<Either<LL, RR>, Either<LL, RR>> FilterMap(Predicate<RR> p, Function<RR, LL> fn) {
-            return either -> either.asRight().filterMap(p, fn);
-        }
-        /**
-         * Return a function that accepts an either, projects it to the Right, and calls {@link Projection#stream()}.
-         */
-        static <LL, RR> Function<Either<LL, RR>, Stream<RR>> Stream() { return either -> either.asRight().stream(); }
-    }
+	/**
+	 * Perform the appropriate mapping operation on this Either.
+	 * @param fnLeft the function to apply if this is a Left
+	 * @param fnRight the function to apply if this is a Right
+	 * @return the result with the appropriate function applied
+	 * @param <NEWL> the type of the left after applying the function
+	 * @param <NEWR> the type of the right after applying the function
+	 */
+	<NEWL, NEWR> Either<NEWL, NEWR> map(Function<L, NEWL> fnLeft, Function<R, NEWR> fnRight);
 
-    /**
-     * An implementation of Either and Projection representing a Left value.
-     */
-    private static final class LeftProjection<L, R> extends Either<L, R> implements Left<L, R> {
-        final L leftValue;
-        private LeftProjection(final Sealed _token, final L _leftValue) { super(_token); leftValue = _leftValue; }
+	/**
+	 * Apply the mapping function to the left value if this is a Left, otherwise return this
+	 * @param fn the function to apply to a left value
+	 * @return a new result with the left mapped or this unmodified if this is a right
+	 * @param <Z> the new left type
+	 */
+	<Z> Either<Z, R> mapLeft(Function<L, Z> fn);
 
-        @Override public boolean isLeft() { return true; }
-        @Override public boolean isRight() { return false; }
-        @Override public L get() { return leftValue; }
-        @Override public L orElseThrow(Function<R, RuntimeException> exceptionSupplier) { return leftValue; }
-        @Override public L orElseMap(Function<R, L> fn) { return leftValue; }
-        @Override public Optional<L> opt() { return Optional.of(leftValue); }
-        @Override public boolean filter(Predicate<L> fn) { return fn.test(leftValue); }
-        @Override public Either<L, R> peek(Consumer<L> fn) { fn.accept(leftValue); return this; }
-        @Override public <Z> Either<Z, R>  map(Function<L, Z> fn) { return Either.ofLeft(fn.apply(leftValue)); }
-        @Override public <Z> Either<Z, R> flatMap(Function<L, Either<Z, R>> fn) { return fn.apply(leftValue); }
-        @Override public Either<L, R> filterMap(Predicate<L> p, Function<L, R> fn) {
-            return p.test(leftValue) ? Either.ofRight(fn.apply(leftValue)) : this;
-        }
-        @Override public Stream<L> stream() { return Stream.of(leftValue); }
+	/**
+	 * Apply the mapping function to the right value if this is a Right, otherwise return this
+	 * @param fn the function to apply to a right value
+	 * @return a new result with the right mapped or this unmodified if this is a left
+	 * @param <Z> the new right type
+	 */
+	<Z> Either<L, Z> mapRight(Function<R, Z> fn);
 
-        @Override public Right<L, R> asRight() { return new EmptyRightProjection<>(this); }
+	/**
+	 * Apply the supplied predicate to the wrapped left value or return true if this is a right.
+	 * Semantically, {@code return (this instanceof Right || fn.test(left))}
+	 * If you want {@code &&} semantics, use {@link #isLeft()}
+	 * @param fn the predicate to apply to the left value
+	 * @return true if this is not a left or the result of applying the predicate to the left value
+	 */
+	default boolean filterLeft(Predicate<L> fn) {
+		return true;
+	}
 
-        @Override public Left<L, R> asLeft() { return this; }
-        @Override public Either<R, L> swap() { return Either.ofRight(leftValue); }
-        @Override public <ML, MR> Either<ML, MR> mapEither(Function<L, ML> fnLeft, Function<R, MR> fnRight) {
-            return Either.ofLeft(fnLeft.apply(leftValue));
-        }
-        @Override public Either<L, R> forEither(Consumer<L> fnLeft, Consumer<R> fnRight) {
-            fnLeft.accept(leftValue);
-            return this;
-        }
-        @Override public <T> T reduce(Function<L, T> fnLeft, Function<R, T> fnRight) { return fnLeft.apply(leftValue); }
-        @Override public String toString() { return "Left[" + leftValue.toString() + "]"; }
+	/**
+	 * Apply the supplied predicate to the wrapped right value or return true if this is a left.
+	 * Semantically, {@code return (this instanceof Left || fn.test(right))}
+	 * If you want {@code &&} semantics, use {@link #isRight()}
+	 * @param fn the predicate to apply to the right value
+	 * @return true if this is not a right or the result of applying the predicate to the right value
+	 */
+	default boolean filterRight(Predicate<R> fn) {
+		return true;
+	}
 
-        @Override public int hashCode() { return leftValue.hashCode(); }
-        @Override public boolean equals(final Object other) {
-            if (other instanceof LeftProjection) {
-                return Objects.equals(leftValue, ((LeftProjection<?, ?>) other).leftValue);
-            } else if (other instanceof EmptyRightProjection) {
-                return Objects.equals(leftValue, ((EmptyRightProjection<?, ?>) other).leftEither.leftValue);
-            } else {
-                return false;
-            }
-        }
-    }
+	/**
+	 * Apply the supplied consumer to the wrapped left value, or if this is a right, perform no operation.
+	 * <strong>This function is used to achieve side effects.
+	 * You are strongly encouraged to document the side effect if it involves mutating external state.</strong>
+	 * In the most innocuous case, you're writing to a log.
+	 * In other cases, you could be modifying a collection, for example,
+	 * Collecting a list of lefts before filtering them from the pipeline.
+	 * @return this, unmodified
+	 */
+	default Either<L, R> ifLeft(Consumer<L> fn) {
+		return this;
+	}
 
-    /**
-     * An implementation of Either and Projection representing a Right value.
-     */
-    private static final class RightProjection<L, R> extends Either<L, R> implements Right<L, R> {
-        private final R rightValue;
-        private RightProjection(final Sealed _token, final R _rightValue) { super(_token); rightValue = _rightValue; }
+	/**
+	 * Apply the supplied consumer to the wrapped right value, or if this is a left, perform no operation.
+	 * <strong>This function is used to achieve side effects.
+	 * You are strongly encouraged to document the side effect if it involves mutating external state.</strong>
+	 * In the most innocuous case, you're writing to a log.
+	 * In other cases, you could be modifying a collection, for example,
+	 * when comparing entries from a database and entries from some other source of truth,
+	 * collecting a delta as a side effect of some primary operation.
+	 * You could remove processed entries from a list, and then anything left over after the pipeline runs
+	 * are things that are not present in the other source.
+	 * @param fn the consumer to apply to the wrapped right value, performing side effects
+	 * @return this, unmodified
+	 */
+	default Either<L, R> ifRight(Consumer<R> fn) {
+		return this;
+	}
 
-        @Override public boolean isLeft() { return false; }
-        @Override public boolean isRight() { return true; }
-        @Override public R get() { return rightValue; }
-        @Override public R orElseThrow(Function<L, RuntimeException> exceptionSupplier) { return rightValue; }
-        @Override public R orElseMap(Function<L, R> fn) { return rightValue; }
-        @Override public Optional<R> opt() { return Optional.of(rightValue); }
-        @Override public boolean filter(Predicate<R> fn) { return fn.test(rightValue); }
-        @Override public Either<L, R> peek(Consumer<R> fn) { fn.accept(rightValue); return this;}
-        @Override public <Z> Either<L, Z> map(Function<R, Z> fn) { return Either.ofRight(fn.apply(rightValue)); }
-        @Override public <Z> Either<L, Z> flatMap(Function<R, Either<L, Z>> fn) { return fn.apply(rightValue); }
-        @Override public Either<L, R> filterMap(Predicate<R> p, Function<R, L> fn) {
-            return p.test(rightValue) ? Either.ofLeft(fn.apply(rightValue)) : this;
-        }
-        @Override public Stream<R> stream() { return Stream.of(rightValue); }
+	/**
+	 * If this result is a left, apply the supplied predicate to determine if recovery is possible,
+	 * and if that returns true, apply the supplied mapping function to the left value
+	 * and return a right result with the new value.
+	 * @param testFn the predicate to apply to the left value
+	 * @param mapFn the mapping function to apply to the left value
+	 * @return a new result with the left value mapped to a right if this is a left and the supplied predicate matches,
+	 * otherwise return this unmodified
+	 */
+	default Either<L, R> toRightIf(Predicate<L> testFn, Function<L, R> mapFn) { return this; }
 
-        @Override public Right<L, R> asRight() { return this; }
-        @Override public Left<L, R> asLeft() { return new EmptyLeftProjection<>(this); }
+	/**
+	 * If this result is a right, apply the supplied predicate, and if that returns true, apply the
+	 * supplied mapping function to the right value and return a left result with the result.
+	 * @param testFn the predicate to apply to the right value
+	 * @param mapFn the mapping function to apply to the right value
+	 * @return a new result with the right value mapped to a left if this is a right and the supplied predicate matches,
+	 * otherwise return this unmodified
+	 */
+	default Either<L, R> toLeftIf(Predicate<R> testFn, Function<R, L> mapFn) { return this; }
 
-        @Override public Either<R, L> swap() { return Either.ofLeft(rightValue); }
-        @Override public <ML, MR> Either<ML, MR> mapEither(Function<L, ML> fnLeft, Function<R, MR> fnRight)
-        { return Either.ofRight(fnRight.apply(rightValue)); }
-        @Override public Either<L, R> forEither(Consumer<L> fnLeft, Consumer<R> fnRight)
-        { fnRight.accept(rightValue); return this; }
-        @Override public <T> T reduce(Function<L, T> fnLeft, Function<R, T> fnRight)
-        { return fnRight.apply(rightValue); }
-        @Override public String toString() { return "Right[" + rightValue.toString() + "]"; }
+	/**
+	 * Apply the appropriate mapping function and return the resulting value.
+	 * @param fnLeft the function to apply if this is a Left
+	 * @param fnRight the function to apply if this is a Right
+	 * @return a value of some common type, produced by applying the appropriate mapping function
+	 * @param <Z> the result type
+	 */
+	<Z> Z reduce(Function<L, Z> fnLeft, Function<R, Z> fnRight);
 
-        @Override public int hashCode() { return rightValue.hashCode(); }
-        @Override public boolean equals(final Object other) {
-            if (other instanceof RightProjection) {
-                return Objects.equals(rightValue, ((RightProjection<?, ?>) other).rightValue);
-            } else if (other instanceof EmptyLeftProjection) {
-                return Objects.equals(rightValue, ((EmptyLeftProjection<?, ?>) other).rightEither.rightValue);
-            } else {
-                return false;
-            }
-        }
-    }
+	/**
+	 * Swap the type parameters and convert this into the opposing type.
+	 */
+	Either<R, L> swap();
 
-    /**
-     * An implementation of Projection representing the empty Left value of a Right Either
-     */
-    private static final class EmptyLeftProjection<L, R> implements Left<L, R> {
-        private final RightProjection<L, R> rightEither;
-        private EmptyLeftProjection(final RightProjection<L, R> _rightEither) { rightEither = _rightEither; }
+	record Left<L, R>(L value) implements Either<L, R> {
 
-        @Override public L get()
-        { throw new NoSuchElementException("Calling get() on a left projection of a right either"); }
-        @Override public L orElseThrow(Function<R, RuntimeException> exceptionSupplier)
-        { throw exceptionSupplier.apply(rightEither.rightValue); }
-        @Override public L orElseMap(Function<R, L> fn) { return fn.apply(rightEither.rightValue); }
-        @Override public Optional<L> opt() { return Optional.empty(); }
-        @Override public boolean filter(Predicate<L> fn) { return true; }
-        @Override public Either<L, R> peek(Consumer<L> fn) { return rightEither; }
-        @Override public <Z> Either<Z, R> map(Function<L, Z> fn) { return Either.ofRight(rightEither.rightValue); }
-        @Override public <Z> Either<Z, R> flatMap(Function<L, Either<Z, R>> fn)
-        { return Either.ofRight(rightEither.rightValue); }
-        @Override public Either<L, R> filterMap(Predicate<L> p, Function<L, R> fn) { return rightEither; }
-        @Override public Stream<L> stream() { return Stream.empty(); }
-        @Override public String toString() { return rightEither.toString(); }
+		@Override public Left<L, R> as(final Left<?, ?> thiz) {
+			if (thiz != this)
+				throw new IllegalArgumentException("Left.as: argument must be the pattern variable bound to this Left");
+			return this;
+		}
 
-        @Override public int hashCode() { return rightEither.hashCode(); }
-        @Override public boolean equals(final Object other) {
-            if (other instanceof EmptyLeftProjection) {
-                return Objects.equals(rightEither, ((EmptyLeftProjection<?, ?>) other).rightEither);
-            } else if (other instanceof RightProjection) {
-                return Objects.equals(rightEither.rightValue, ((RightProjection<?, ?>) other).rightValue);
-            } else {
-                return false;
-            }
-        }
-    }
+		@Override public boolean isLeft() { return true; }
 
-    /**
-     * An implementation of Projection representing the empty Right value of a Left Either
-     */
-    private static final class EmptyRightProjection<L, R> implements Right<L, R> {
-        private final LeftProjection<L, R> leftEither;
-        private EmptyRightProjection(final LeftProjection<L, R> _leftEither) { leftEither = _leftEither; }
+		public <Z> Either<L, Z> into() { return left(value); }
 
-        @Override public R get()
-        { throw new NoSuchElementException("Calling get() on a right projection of a left either"); }
-        @Override public R orElseThrow(Function<L, RuntimeException> exceptionSupplier)
-        { throw exceptionSupplier.apply(leftEither.leftValue); }
-        @Override public R orElseMap(Function<L, R> fn) { return fn.apply(leftEither.leftValue); }
-        @Override public Optional<R> opt() { return Optional.empty(); }
-        @Override public boolean filter(Predicate<R> fn) { return true; }
-        @Override public Either<L, R> peek(Consumer<R> fn) { return leftEither; }
-        @Override public <Z> Either<L, Z> map(Function<R, Z> fn) { return Either.ofLeft(leftEither.leftValue); }
-        @Override public <Z> Either<L, Z> flatMap(Function<R, Either<L, Z>> fn)
-        { return Either.ofLeft(leftEither.leftValue); }
-        @Override public Either<L, R> filterMap(Predicate<R> p, Function<R, L> fn) { return leftEither; }
-        @Override public Stream<R> stream() { return Stream.empty(); }
-        @Override public String toString() { return leftEither.toString(); }
+		@Override public L expectLeft() { return value; }
 
-        @Override public int hashCode() { return leftEither.hashCode(); }
-        @Override public boolean equals(final Object other) {
-            if (other instanceof EmptyRightProjection) {
-                return Objects.equals(leftEither, ((EmptyRightProjection<?, ?>) other).leftEither);
-            } else if (other instanceof LeftProjection) {
-                return Objects.equals(leftEither.leftValue, ((LeftProjection<?, ?>) other).leftValue);
-            } else {
-                return false;
-            }
-        }
-    }
+		@Override public Optional<L> optLeft() { return Optional.ofNullable(value); }
 
-    /**
-     * Construct a new Left Either with the supplied value.
-     */
-    public static <L, R> Either<L, R> ofLeft(final L l)
-    { return new LeftProjection<>(Either.ADDITIONAL_SUBCLASSES_NOT_ALLOWED, l); }
-    /**
-     * Construct a new Right Either with the supplied value.
-     */
-    public static <L, R> Either<L, R> ofRight(final R r)
-    { return new RightProjection<>(Either.ADDITIONAL_SUBCLASSES_NOT_ALLOWED, r); }
-    /**
-     * Construct an Either with the same left and right type, deciding which based upon the isLeft boolean.
-     */
-    public static <E> Either<E, E> of(final boolean isLeft, final E e)
-    { return isLeft ? Either.ofLeft(e) : Either.ofRight(e); }
-    /**
-     * Construct an Either with the same left and right type, deciding which based upon the supplied predicate.
-     */
-    public static <E> Either<E, E> of(final BooleanSupplier isLeft, final E e)
-    { return isLeft.getAsBoolean() ? Either.ofLeft(e) : Either.ofRight(e); }
-    /**
-     * Construct an Either with the same left and right type, deciding which based upon the supplied predicate.
-     */
-    public static <E> Either<E, E> of(final Predicate<E> isLeft, final E e)
-    { return isLeft.test(e) ? Either.ofLeft(e) : Either.ofRight(e); }
+		@Override public <P, Q> Either<P, Q> map(Function<L, P> fnLeft, Function<R, Q> fnRight) {
+			return left(fnLeft.apply(value));
+		}
 
-    /**
-     * Return true if this is a left either, false otherwise.
-     */
-    public abstract boolean isLeft();
-    /**
-     * Return true if this is a right either, false otherwise
-     */
-    public abstract boolean isRight();
+		@Override public <Z> Either<L, Z> mapRight(final Function<R, Z> fn) { return left(value); }
 
-    /**
-     * Get this Either as a left projection
-     */
-    public abstract Left<LEFT, RIGHT> asLeft();
-    /**
-     * Get this Either as a right projection
-     */
-    public abstract Right<LEFT, RIGHT> asRight();
+		@Override public <Z> Either<Z, R> mapLeft(final Function<L, Z> fn) { return left(fn.apply(value)); }
 
-    /**
-     * Transpose the types of this Either and convert from a Left to a Right or vice versa.
-     */
-    public abstract Either<RIGHT, LEFT> swap();
+		@Override public boolean filterLeft(final Predicate<L> fn) { return fn.test(value); }
 
-    /**
-     * Execute the appropriate mapping function for this Either type and return a new Either with the same projection
-     */
-    public abstract <ML, MR> Either<ML, MR> mapEither(Function<LEFT, ML> fnLeft, Function<RIGHT, MR> fnRight);
+		@Override public Either<L, R> ifLeft(final Consumer<L> fn) {
+			fn.accept(value);
+			return this;
+		}
 
-    public static <L, R, ML, MR> Function<Either<L, R>, Either<ML, MR>> MapEither(
-            final Function<L, ML> fnLeft, final Function<R, MR> fnRight)
-    { return either -> either.mapEither(fnLeft, fnRight); }
+		@Override public Either<L, R> toRightIf(final Predicate<L> testFn, final Function<L, R> mapFn) {
+			if (testFn.test(value)) {
+				return right(mapFn.apply(value));
+			} else {
+				return this;
+			}
+		}
 
-    /**
-     * Execute the appropriate consumer for this Either type and return this Either for chaining
-     */
-    public abstract Either<LEFT, RIGHT> forEither(Consumer<LEFT> fnLeft, Consumer<RIGHT> fnRight);
+		@Override public <Z> Z reduce(Function<L, Z> fnLeft, Function<R, Z> fnRight) { return fnLeft.apply(value); }
 
-    public static <L, R> Function<Either<L, R>, Either<L, R>> ForEither(final Consumer<L> fnLeft, final Consumer<R> fnRight)
-    { return either -> either.forEither(fnLeft, fnRight); }
+		@Override public Either<R, L> swap() { return right(value); }
+	}
 
-    /**
-     * Execute the appropriate function for this Either type and return the generated value
-     */
-    public abstract <T> T reduce(Function<LEFT, T> fnLeft, Function<RIGHT, T> fnRight);
+	record Right<L, R>(R value) implements Either<L, R> {
 
-    public static <L, R, T> Function<Either<L, R>, T> Reduce(final Function<L, T> fnLeft, final Function<R, T> fnRight)
-    { return either -> either.reduce(fnLeft, fnRight); }
+		@Override
+		public Right<L, R> as(final Right<?, ?> thiz) {
+			if (thiz != this)
+				throw new IllegalArgumentException("Right.as: argument must be the pattern variable bound to this Right");
+			return this;
+		}
 
-    /**
-     * In Scala terminology, a 'sealed' class is one that has been subclassed, but no additional subclasses can
-     * be created.  I'm achieving this effect in Java by declaring an instance of a private type,
-     * which is required to instantiate any subclasses.
-     * The only way a subclass may exist is to be defined as a nested member of this outer class.
-     * There are easier ways of doing this, but this approach is expected to cause the least confusion
-     * to anyone trying to understand what's going on.
-     */
-    private static final class Sealed {}
-    private static final Sealed ADDITIONAL_SUBCLASSES_NOT_ALLOWED = new Sealed();
-    /**
-     * This class cannot be extended beyond the two subclasses defined in this file
-     */
-    private Either(final Sealed _token) {
-        if (_token != ADDITIONAL_SUBCLASSES_NOT_ALLOWED)
-            throw new IllegalArgumentException("Only the subclasses defined in the Either class may exist");
-    }
+		@Override public boolean isRight() { return true; }
+
+		public <Z> Either<Z, R> into() { return right(value); }
+
+		@Override public R expectRight() { return value; }
+
+		@Override public Optional<R> optRight() { return Optional.ofNullable(value); }
+
+		@Override public <P, Q> Either<P, Q> map(final Function<L, P> fnLeft, final Function<R, Q> fnRight) {
+			return right(fnRight.apply(value));
+		}
+
+		@Override public <Z> Either<L, Z> mapRight(final Function<R, Z> fn) { return right(fn.apply(value)); }
+
+		@Override public <Z> Either<Z, R> mapLeft(final Function<L, Z> fn) { return right(value); }
+
+		@Override public boolean filterRight(final Predicate<R> fn) { return fn.test(value); }
+
+		@Override public Either<L, R> ifRight(final Consumer<R> fn) {
+			fn.accept(value);
+			return this;
+		}
+
+		@Override public Either<L, R> toLeftIf(final Predicate<R> testFn, final Function<R, L> mapFn) {
+			if (testFn.test(value)) {
+				return left(mapFn.apply(value));
+			} else {
+				return this;
+			}
+		}
+
+		@Override public <Z> Z reduce(final Function<L, Z> fnLeft, final Function<R, Z> fnRight) {
+			return fnRight.apply(value);
+		}
+
+		@Override public Either<R, L> swap() { return left(value); }
+	}
+
+	final class Lefts {
+		public <L, R, Z> Function<Either<L, R>, Either<Z, R>> map(final Function<L, Z> fn) {
+			return res -> res.mapLeft(fn);
+		}
+
+		public <L, R> Predicate<Either<L, R>> filter(final Predicate<L> fn) {
+			return res -> res.filterLeft(fn);
+		}
+
+		public <L, R> Function<Either<L, R>, Either<L, R>> toRightIf(
+				final Predicate<L> testFn, final Function<L, R> mapFn) {
+			return res -> res.toRightIf(testFn, mapFn);
+		}
+
+		public <L, R> Function<Either<L, R>, Either<R, L>> swap() {
+			return Either::swap;
+		}
+
+		public <L, R> Consumer<Either<L, R>> ifLeft(final Consumer<L> fn) {
+			return res -> res.ifLeft(fn);
+		}
+
+		private Lefts() {
+			throw new IllegalStateException("This is a static class and should never be instantiated");
+		}
+	}
+
+	final class Rights {
+		public <L, R, Z> Function<Either<L, R>, Either<L, Z>> map(final Function<R, Z> fn) {
+			return res -> res.mapRight(fn);
+		}
+
+		public <L, R> Predicate<Either<L, R>> filter(final Predicate<R> fn) {
+			return res -> res.filterRight(fn);
+		}
+
+		public <L, R> Function<Either<L, R>, Either<L, R>> toLeftIf(
+				final Predicate<R> testFn, final Function<R, L> mapFn) {
+			return res -> res.toLeftIf(testFn, mapFn);
+		}
+
+		public <L, R> Function<Either<L, R>, Either<R, L>> swap() {
+			return Either::swap;
+		}
+
+		public <L, R> Consumer<Either<L, R>> ifRight(final Consumer<R> fn) {
+			return res -> res.ifRight(fn);
+		}
+
+		private Rights() {
+			throw new IllegalStateException("This is a static class and should never be instantiated");
+		}
+	}
 }
