@@ -1,25 +1,22 @@
 
-# Projection-to-direct-method mechanical rewrites for old Result API -> new Result API
-
 s/\.asErr\(\)\.map\(/.mapErr(/g
-s/\.asOk\(\)\.map\(/.mapOk(/g
+s/\.asOk\(\)\.map\(/.map(/g
 
 s/\.asErr\(\)\.peek\(/.ifErr(/g
 s/\.asOk\(\)\.peek\(/.ifOk(/g
 
 s/\.asErr\(\)\.opt\(\)/.optErr\(\)/g
-s/\.asOk\(\)\.opt\(\)/.optOk\(\)/g
+s/\.asOk\(\)\.opt\(\)/.opt\(\)/g
 
 s/\.asErr\(\)\.filter\(/.filterErr(/g
-s/\.asOk\(\)\.filter\(/.filterOk(/g
+s/\.asOk\(\)\.filter\(/.filter(/g
 
 s/\.asOk\(\)\.flatMap\(/.flatMap(/g
+s/\.asErr\(\)\.flatMap\(/.flatRecover(/g
 
 s/\.asErr\(\)\.filterMap\(/.recoverIf(/g
 s/\.asOk\(\)\.filterMap\(/.failIf(/g
 
-# Simple cases where get\(\) can be converted mechanically.
-# These are intentionally broad; compiler errors will catch any misses.
 s/\.asErr\(\)\.get\b/.expectErr/g
 s/\.asOk\(\)\.get\b/.expectOk/g
 

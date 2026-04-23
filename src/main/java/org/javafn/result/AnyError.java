@@ -64,17 +64,15 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	record ErrorList(List<AnyError> errors, Supplier<String> toMessage) implements AnyError {
-		private static final Supplier<String> EMPTY = () -> "";
+	record ErrorList(List<AnyError> errors) implements AnyError {
 		public ErrorList() {
-			this(List.of(), EMPTY);
+			this(List.of());
 		}
-		public ErrorList(final List<AnyError> errors) {
-			this(errors, () -> errors.stream()
+		@Override public String message() {
+			return errors.stream()
 					.map(AnyError::message)
-					.collect(Collectors.joining("\n")));
+					.collect(Collectors.joining("\n"));
 		}
-		@Override public String message() { return toMessage.get(); }
 		@Override
 		public ErrorList join(final AnyError that) {
 			if (that == null) return this;

@@ -11,20 +11,37 @@ import java.util.function.Predicate;
  * but never both.  'null' is a valid value, but the Result will either be an err or an ok,
  * and the other value will be empty (similar to Optional.empty()).
  * <pre>{@code
- * Result.<Exception, String>ok(theUrl)
- *      .flatMap(u -> Try.value(() -> new URL(u)))
- *      .flatMap(Try.Map(URL::openConnection))
- *      .flatMap(Try.Map(URLConnection::getInputStream))
- *      .mapOk(is -> new BufferedReader(new InputStreamReader(is)))
- *      .mapOk(BufferedReader::lines)
- *      .ifErr(ex -> System.err.println("An exception occurred trying to fetch the url."))
- *      .ifErr(Exception::printStackTrace)
- *      .optOk()
- *      .ifPresent(lines -> System.out.println("URL contents from demoResult: "
- *              + lines.collect(Collectors.joining("\n"))));
+ * final var theUrl = "http://localhost:8080/example";
+ * Result.<AnyError, String>ok(theUrl)
+ *      .flatMap(Try.toMap(URL::new))
+ *          .flatMap(Try.toMap(URL::openConnection))
+ *          .flatMap(Try.toMap(URLConnection::getInputStream))
+ *          .map(is -> new BufferedReader(new InputStreamReader(is)))
+ *          .map(BufferedReader::lines)
+ *          .ifErr(ex -> System.err.println("An exception occurred trying to fetch the url.  " + ex.message()))
+ *          .ifOk(lines -> System.out.println("URL contents from demoResult: "
+ *                  + lines.collect(Collectors.joining("\n"))));
  * }</pre>
  * This class is heavily inspired by Rust's Result type
  * <a href="https://doc.rust-lang.org/std/result/">https://doc.rust-lang.org/std/result/</a>.
+ * One notable limitation is the lack of the {@code ?} operator.  There's nothing we can do about that.
+ * The preferred pattern is to fluently chain operations on the result, however there are times when
+ * an escape hatch is absolutely necessary.  Our preferred pattern is this:
+ * <pre>{@code
+ * public Result<String, Long> testIt() {
+ *     final Integer i; {
+ *         final Result<AnyError, Integer> res = doCompute();
+ *         if (res instanceof Err<?, ?> e) {
+ *             return res.as(e).into();
+ *         }
+ *         i = res.expectOk();
+ *     }
+ *     return ok(i.longValue());
+ * }
+ * }</pre>
+ * Notice that the result variable is contained within a scope block.  This is not required,
+ * but it keeps scope clean.  The variable of interest is defined outside of the block and assigned
+ * at the end of the block.  The error is handled with a return and the ok is handled with an assignment.
  *
  * @param <ERR> the type of value stored if this is an err
  * @param <OK>  the type of value stored if this is an ok
@@ -32,8 +49,7 @@ import java.util.function.Predicate;
  * @see Result.Ok
  */
 public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
-
-    /** Create a new Result wrapping a successful value. */
+     /** Create a new Result wrapping a successful value. */
     static <ERR, OK> Result<ERR, OK> ok(final OK ok) {
         return new Ok<>(ok);
     }
@@ -140,9 +156,6 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      */
     default boolean isOk() { return false; }
 
-//    /** Map the error into an AnyError if this is an err */
-//    Result<AnyError, OK> any();
-
     /**
      * Unsafe operation, only safe in a branch opposite a test against ok.
      * Access the error value or throw an exception.
@@ -190,7 +203,7 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * Get the non-null ok value of this result wrapped in an optional, or an empty optional if this result
      * is not an ok or the wrapped ok value is null.
      */
-    default Optional<OK> optOk() {
+    default Optional<OK> opt() {
         return Optional.empty();
     }
 
@@ -218,12 +231,12 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * @return a new result with the ok mapped or this unmodified if this is an err
      * @param <Z> the new ok type
      */
-    <Z> Result<ERR, Z> mapOk(Function<OK, Z> fn);
+    <Z> Result<ERR, Z> map(Function<OK, Z> fn);
 
     /**
      * Apply the supplied predicate to the wrapped error value or return true if this is an ok.
      * Semantically, {@code return (this instanceof Ok || fn.test(err))}
-     * If you want {@code &&} semantics, use {@link #isErr()}
+     * If you want {@code &&} semantics, use {@link #isErrAnd(Predicate)}
      * @param fn the predicate to apply to the error value
      * @return true if this is not an error or the result of applying the predicate to the error value
      */
@@ -234,13 +247,31 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
     /**
      * Apply the supplied predicate to the wrapped ok value or return true if this is an err.
      * Semantically, {@code return (this instanceof Err || fn.test(ok))}
-     * If you want {@code &&} semantics, use {@link #isOk()}
+     * If you want {@code &&} semantics, use {@link #isOkAnd(Predicate)}
      * @param fn the predicate to apply to the ok value
      * @return true if this is not an ok or the result of applying the predicate to the ok value
      */
-    default boolean filterOk(Predicate<OK> fn) {
+    default boolean filter(Predicate<OK> fn) {
         return true;
     }
+
+    /**
+     * Apply the supplied predicate to the wrapped error value or return false if this is an ok.
+     * Semantically, {@code return (this instanceof Err && fn.test(err))}
+     * If you want {@code ||} semantics, use {@link #filterErr(Predicate)}
+     * @param fn the predicate to apply to the error value
+     * @return false if this is not an error or the result of applying the predicate to the error value
+     */
+    default boolean isErrAnd(Predicate<ERR> fn) { return false; }
+
+    /**
+     * Apply the supplied predicate to the wrapped ok value or return false if this is an error.
+     * Semantically, {@code return (this instanceof Ok && fn.test(ok))}
+     * If you want {@code ||} semantics, use {@link #filter(Predicate)}
+     * @param fn the predicate to apply to the ok value
+     * @return false if this is not an ok or the result of applying the predicate to the ok value
+     */
+    default boolean isOkAnd(Predicate<OK> fn) { return false; }
 
     /**
      * Apply the supplied consumer to the wrapped err value, or if this is an ok, perform no operation.
@@ -294,8 +325,26 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
     default Result<ERR, OK> failIf(Predicate<OK> testFn, Function<OK, ERR> mapFn) { return this; }
 
     /**
+     * Apply the supplied mapping function, which itself returns a Result, to this Result's err value if it is an err.
+     * If the mapping function returns an Err, return that err rather than an <pre>{@code Err<Err<e,o>,o>}</pre>.
+     * In other words, if the supplied mapping function would result in
+     * <pre>{@code
+     * Result<Result<AnyError, Foo>, Foo> res2 = res1.mapOk(...);
+     * }</pre>
+     * this function "flattens" it to
+     * <pre>{@code
+     * Result<AnyError, Foo> res2 = res1.flatRecover(...);
+     * }</pre>
+     * Comparable to {@link #flatMap(Function)}, except calling the function on the Err value and returning a flat Result.
+     * @param fn a function that returns a result with the same ok type as this Result
+     * @return this, if this Result is already an ok, otherwise, the result of applying the function to the err value
+     * @param <NEWERR> the type of the err after mapping
+     */
+    <NEWERR> Result<NEWERR, OK> flatRecover(Function<ERR, Result<NEWERR, OK>> fn);
+
+    /**
      * Apply the supplied mapping function, which itself returns a Result, to this Result's ok value if it is an ok.
-     * If the mapping function returns an Err, turn this into an Err rather than an <pre>{@code Ok<Result<...>>}</pre>.
+     * If the mapping function returns an Err, turn this into an Err rather than an <pre>{@code Ok<e,Err<e, o>>}</pre>.
      * In other words, if the supplied mapping function would result in
      * <pre>{@code
      * Result<AnyError, Result<AnyError, Foo>> res2 = res1.mapOk(...);
@@ -304,7 +353,7 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * <pre>{@code
      * Result<AnyError, Foo> res2 = res1.flatMap(...);
      * }</pre>
-     * There is no symmetric function for errors.
+     * Comparable to {@link #flatRecover(Function)}, except calling the function on the Ok value and returning a flat Result.
      * @param fn a function that returns a result with the same error type as this Result
      * @return this, if this Result is already an Err, otherwise, the result of applying the function to the ok value
      * @param <NEWOK> the type of the ok after mapping
@@ -329,10 +378,13 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
 
     /**
      * A Result implementation that wraps an error value, obtained by calling {@link Result#err(Object)}.
-     * To access {@link Ok#value}, You should obtain an Err by doing an instanceof check
+     * To access {@link Err#value}, You should obtain an Err by doing an instanceof check
      * <pre>{@code
+     * final Result<AnyError, String> res = ...
      * if (res instanceof Err<?, ?> e) {
-     *     final AnyError value = res.as(e).value();
+     *     final AnyError value = res // Result<AnyError, String>
+     *          .as(e)                // Err<AnyError, String>
+     *          .value();             // AnyError
      * }
      * }</pre>
      */
@@ -346,33 +398,22 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
 
         @Override public boolean isErr() { return true; }
 
-    //        @Override Result<AnyError, OK> any() {
-    //            if (value instanceof String s) {
-    //                return err(AnyError.from(s));
-    //            } else if (value instanceof Exception e) {
-    //                return err(AnyError.from(e));
-    //            } else if (value instanceof List<?> l) {
-    //                return err(AnyError.from(l));
-    //            } else if (value instanceof Enum<?> e) {
-    //                return err(AnyError.from(e));
-    //            }
-    //            return err(AnyError.from(value));
-    //        }
-
         /**
          * Coerce the OK type to a new type and return this otherwise unmodified.
          * This function is not defined on Result.  You should obtain an Err by doing an instanceof check
          * <pre>{@code
-         * public Result<AnyErr, Foo> demoFunction() {
-         *     final Result<AnyErr, Bar> res = someOperation();
+         * public Result<AnyError, Foo> demoFunction() {
+         *     final Result<AnyError, Bar> res = someOperation();
          *     if (res instanceof Err<?, ?> e) {
-         *         return res.as(e).into();
+         *         return res      // Result<AnyError, Bar>
+         *              .as(e)     // Err<AnyError, Bar>
+         *              .into();   // Result<AnyError, Foo>
          *     }
          *     final Bar bar = res.expectOk();
          * }
          * }</pre>
          *
-         * @return the value wrapped in this Err result
+         * @return this Err with the OK type coerced to a new type
          */
         public <Z> Result<ERR, Z> into() { return err(value); }
 
@@ -384,11 +425,13 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
             return err(fnErr.apply(value));
         }
 
-        @Override public <Z> Result<ERR, Z> mapOk(final Function<OK, Z> fn) { return err(value); }
+        @Override public <Z> Result<ERR, Z> map(final Function<OK, Z> fn) { return into(); }
 
         @Override public <Z> Result<Z, OK> mapErr(final Function<ERR, Z> fn) { return err(fn.apply(value)); }
 
         @Override public boolean filterErr(final Predicate<ERR> fn) { return fn.test(value); }
+
+        @Override public boolean isErrAnd(Predicate<ERR> fn) { return fn.test(value); }
 
         @Override public Result<ERR, OK> ifErr(final Consumer<ERR> fn) {
             fn.accept(value);
@@ -398,14 +441,18 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
         @Override public Result<ERR, OK> recoverIf(final Predicate<ERR> testFn, final Function<ERR, OK> mapFn) {
             if (testFn.test(value)) {
                 return ok(mapFn.apply(value));
-            } else {
-                return this;
             }
+            return this;
         }
 
-        @Override public <Z> Result<ERR, Z> flatMap(final Function<OK, Result<ERR, Z>> fn) { return err(value); }
+        @Override public <Z> Result<ERR, Z> flatMap(final Function<OK, Result<ERR, Z>> fn) { return into(); }
+        @Override public <NEWERR> Result<NEWERR, OK> flatRecover(final Function<ERR, Result<NEWERR, OK>> fn) {
+            return fn.apply(value);
+        }
 
-        @Override public <Z> Z reduce(Function<ERR, Z> fnErr, Function<OK, Z> fnOk) { return fnErr.apply(value); }
+        @Override public <Z> Z reduce(final Function<ERR, Z> fnErr, final Function<OK, Z> fnOk) {
+            return fnErr.apply(value);
+        }
         @Override public void use(final Consumer<ERR> fnErr, final Consumer<OK> fnOk) {
             fnErr.accept(value);
         }
@@ -417,10 +464,30 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * A Result implementation that wraps an ok value, obtained by calling {@link Result#ok(Object)}.
      * To access {@link Ok#value}, You should obtain an Ok by doing an instanceof check
      * <pre>{@code
+     * final Result<AnyError, Foo> res = ...;
      * if (res instanceof Ok<?, ?> o) {
-     *     final Foo value = res.as(o).value();
+     *     final Foo value = res    // Result<AnyError, Foo>
+     *          .as(o)              // Ok<AnyError, Foo>
+     *          .value();           // Foo
      * }
      * }</pre>
+     * Note that this is safer than {@link Result#expectOk()} because that method throws an unchecked exception
+     * if the result type is not an Ok while this method guarantees the type is Ok.  In most cases though,
+     * you will use this pattern on the error case, typically returning {@link Err#into()}, and then calling
+     * {@link Result#expectOk()} because Java 17 does not have exhaustive if statements and therefore can't
+     * recognize the following doesn't need an else branch:
+     * <pre>{@code
+     * final Result<AnyError, Foo> res = ...;
+     * final Foo value;
+     * if (res instanceof Err<?, ?> e) {
+     *      return res.as(e).into();
+     * else if (res instanceof Ok<?, ?>) {
+     *     value = res.as(o).value();
+     * }
+     * // Compile error, value may be undefined.
+     * }</pre>
+     * This has been resolved in later versions of java.  We will likely remove the {@link Result#expectOk()}
+     * methods when our minimum supported version can utilize the exhaustive test of the sealed type.
      */
     record Ok<ERR, OK>(OK value) implements Result<ERR, OK> {
 
@@ -437,39 +504,43 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
          * Coerce the ERR type to a new type and return this otherwise unmodified.
          * This function is not defined on Result.  You should obtain an Ok by doing an instanceof check
          * <pre>{@code
-         * public Result<AnyErr, Foo> demoFunction() {
+         * public Result<AnyError, Foo> demoFunction() {
          *     final Result<Exception, Foo> res = someOperation();
          *     if (res instanceof Ok<?, ?> o) {
-         *         return res.as(o).into();
+         *         return res       // Result<Exception, Foo>
+         *              .as(o)      // Ok<Exception, Foo>
+         *              .into();    // Result<AnyError, Foo>
          *     }
          *     return AnyError.from(res.expectErr());
          * }
          * }</pre>
          * Note that there are better ways of achieving what's shown in the demo function above, for example
          * <pre>{@code
-         * public Result<AnyErr, Foo> demoFunction() {
+         * public Result<AnyError, Foo> demoFunction() {
          *     return someOperation().mapErr(AnyError::from);
          * }
          * }</pre>
          * This function is less useful on the Ok type, but it's included for symmetry.
          *
-         * @return the value wrapped in this Ok result
+         * @return this Ok with the ERR type coerced to a new type
          */
         public <Z> Result<Z, OK> into() { return ok(value); }
 
         @Override public OK expectOk() { return value; }
 
-        @Override public Optional<OK> optOk() { return Optional.ofNullable(value); }
+        @Override public Optional<OK> opt() { return Optional.ofNullable(value); }
 
         @Override public <P, Q> Result<P, Q> map(final Function<ERR, P> fnErr, final Function<OK, Q> fnOk) {
             return ok(fnOk.apply(value));
         }
 
-        @Override public <Z> Result<ERR, Z> mapOk(final Function<OK, Z> fn) { return ok(fn.apply(value)); }
+        @Override public <Z> Result<ERR, Z> map(final Function<OK, Z> fn) { return ok(fn.apply(value)); }
 
-        @Override public <Z> Result<Z, OK> mapErr(final Function<ERR, Z> fn) { return ok(value); }
+        @Override public <Z> Result<Z, OK> mapErr(final Function<ERR, Z> fn) { return into(); }
 
-        @Override public boolean filterOk(final Predicate<OK> fn) { return fn.test(value); }
+        @Override public boolean filter(final Predicate<OK> fn) { return fn.test(value); }
+
+        @Override public boolean isOkAnd(Predicate<OK> fn) { return fn.test(value); }
 
         @Override public Result<ERR, OK> ifOk(final Consumer<OK> fn) {
             fn.accept(value);
@@ -479,14 +550,14 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
         @Override public Result<ERR, OK> failIf(final Predicate<OK> testFn, final Function<OK, ERR> mapFn) {
             if (testFn.test(value)) {
                 return err(mapFn.apply(value));
-            } else {
-                return this;
             }
+            return this;
         }
 
-        @Override public <Z> Result<ERR, Z> flatMap(final Function<OK, Result<ERR, Z>> fn) {
-            return fn.apply(value);
+        @Override public <NEWERR> Result<NEWERR, OK> flatRecover(final Function<ERR, Result<NEWERR, OK>> fn) {
+            return into();
         }
+        @Override public <Z> Result<ERR, Z> flatMap(final Function<OK, Result<ERR, Z>> fn) { return fn.apply(value); }
 
         @Override public <Z> Z reduce(final Function<ERR, Z> fnErr, final Function<OK, Z> fnOk) {
             return fnOk.apply(value);
@@ -508,7 +579,7 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      *     .map(Errs.recoverIf(
      *         e -> e instanceof NumberFormatException,
      *         e -> -1)
-     *     .peek(Errs.ifErr(System.out::println));
+     *     .forEach(Errs.ifErr(System.out::println));
      * }</pre>
      * Without these methods, the preceding would look like
      * <pre>{@code
@@ -518,11 +589,14 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      *     .map(res -> res.recoverIf(
      *         e -> e instanceof NumberFormatException,
      *         e -> -1)
-     *     .peek(res -> res.ifErr(System.out::println));
+     *     .forEach(res -> res.ifErr(System.out::println));
      * }</pre>
      * Namely, the text {@code res -> res} is repeated to the point of becoming noise.
      */
     final class Errs {
+        public static <OK> Function<Result<String, OK>, Result<AnyError, OK>> any() {
+            return res -> res.mapErr(AnyError::from);
+        }
         public static <ERR, OK, Z> Function<Result<ERR, OK>, Result<Z, OK>> map(final Function<ERR, Z> fn) {
             return res -> res.mapErr(fn);
         }
@@ -530,10 +604,18 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
         public static <ERR, OK> Predicate<Result<ERR, OK>> filter(final Predicate<ERR> fn) {
             return res -> res.filterErr(fn);
         }
+        public static <ERR, OK> Predicate<Result<ERR, OK>> isErrAnd(final Predicate<ERR> fn) {
+            return res -> res.isErrAnd(fn);
+        }
 
         public static <ERR, OK> Function<Result<ERR, OK>, Result<ERR, OK>> recoverIf(
                 final Predicate<ERR> testFn, final Function<ERR, OK> mapFn) {
             return res -> res.recoverIf(testFn, mapFn);
+        }
+
+        public static <ERR, OK, Z> Function<Result<ERR, OK>, Result<Z, OK>> flatRecover(
+                final Function<ERR, Result<Z, OK>> fn) {
+            return res -> res.flatRecover(fn);
         }
 
         public static <ERR, OK> Function<Result<ERR, OK>, Result<OK, ERR>> swap() {
@@ -574,11 +656,14 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      */
     final class Oks {
         public static <ERR, OK, Z> Function<Result<ERR, OK>, Result<ERR, Z>> map(final Function<OK, Z> fn) {
-            return res -> res.mapOk(fn);
+            return res -> res.map(fn);
         }
 
         public static <ERR, OK> Predicate<Result<ERR, OK>> filter(final Predicate<OK> fn) {
-            return res -> res.filterOk(fn);
+            return res -> res.filter(fn);
+        }
+        public static <ERR, OK> Predicate<Result<ERR, OK>> isOkAnd(final Predicate<OK> fn) {
+            return res -> res.isOkAnd(fn);
         }
 
         public static <ERR, OK> Function<Result<ERR, OK>, Result<ERR, OK>> failIf(
@@ -602,37 +687,4 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
             throw new IllegalStateException("This is a static class and should never be instantiated");
         }
     }
-//
-//    static void main(String[] args) {
-//        final Result<String, Long> res = testIt();
-//    }
-//
-//    static void testIt2() {
-//        final String theUrl = "localhost";
-//        Result.<Exception, String>ok(theUrl)
-//                .flatMap(u -> Try.get(() -> new URL(u)))
-//                .flatMap(Try.Map(URL::openConnection))
-//                .flatMap(Try.Map(URLConnection::getInputStream))
-//                .mapOk(is -> new BufferedReader(new InputStreamReader(is)))
-//                .mapOk(BufferedReader::lines)
-//                .ifErr(ex -> System.err.println("An exception occurred trying to fetch the url."))
-//                .ifErr(Exception::printStackTrace)
-//                .optOk()
-//                .ifPresent(lines -> System.out.println("URL contents from demoResult: "
-//                        + lines.collect(Collectors.joining("\n"))));
-//    }
-//
-//    static Result<String, Long> testIt() {
-//
-//        final Integer i;
-//        {
-//            final var res1 = Result.<String, Integer>ok(67);
-//            if (res1 instanceof Err<?, ?> e) {
-//                return res1.as(e).into();
-//            }
-//            i = res1.expectOk();
-//        }
-//
-//        return ok(i.longValue());
-//    }
 }
