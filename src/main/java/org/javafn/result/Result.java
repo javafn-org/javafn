@@ -481,7 +481,7 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
      * final Foo value;
      * if (res instanceof Err<?, ?> e) {
      *      return res.as(e).into();
-     * else if (res instanceof Ok<?, ?>) {
+     * } else if (res instanceof Ok<?, ?>) {
      *     value = res.as(o).value();
      * }
      * // Compile error, value may be undefined.
