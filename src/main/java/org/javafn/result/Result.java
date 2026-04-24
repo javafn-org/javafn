@@ -4,6 +4,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collector;
 
 /**
  * An algebraic sum type that represents the possibly unsuccessful execution of an operation.
@@ -66,6 +67,14 @@ public sealed interface Result<ERR, OK> permits Result.Err, Result.Ok {
     /** Create a new Result wrapping an error value. */
     static <ERR, OK> Result<ERR, OK> err(final ERR err) {
         return new Err<>(err);
+    }
+
+    /**
+     * Collect a stream of {@link Result}s into a {@link ResultBatch}.
+     * @return a collector that generates a ResultBatch
+     */
+    static <ERR, OK> Collector<Result<ERR, OK>, ?, ResultBatch<ERR, OK>> batch() {
+        return ResultBatch.collector();
     }
 
     /**
