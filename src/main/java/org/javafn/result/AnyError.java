@@ -5,11 +5,14 @@ import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.javafn.result.Result.err;
+import static org.javafn.result.Result.ok;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,
@@ -26,6 +29,33 @@ public interface AnyError {
 	}
 
 	/* *******************************************************************************/
+
+	@SafeVarargs
+	static Result<AnyError, Void> joined(final Result<AnyError, ?>... results) {
+		return joined(Arrays.asList(results));
+	}
+	static Result<AnyError, Void> joined(final List<Result<AnyError, ?>> results) {
+		return results.stream()
+				.filter(Result::isErr)
+				.map(Result::expectErr)
+				.reduce(AnyError::join)
+				.map(Result::<AnyError, Void>err)
+				.orElseGet(Result::ok);
+	}
+	static <K, J, L> Result<AnyError, List<L>> joined(
+			final List<K> values,
+			final Function<K, Result<AnyError, J>> toRes,
+			final Function<K, L> okMapper) {
+		return values.stream()
+				.map(toRes)
+				.filter(Result::isErr)
+				.map(Result::expectErr)
+				.reduce(AnyError::join)
+				.<Result<AnyError, List<L>>>map(Result::err)
+				.orElseGet(() -> ok(values.stream()
+						.map(okMapper)
+						.toList()));
+	}
 
 	static <O> Result<AnyError, O> fail(final String errorMessage) {
 		return err(new StringError(errorMessage));
