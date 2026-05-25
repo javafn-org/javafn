@@ -4,10 +4,14 @@ import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.Arrays;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.javafn.result.Result.err;
+import static org.javafn.result.Result.ok;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,
@@ -24,6 +28,18 @@ public interface AnyError {
 	}
 
 	/* *******************************************************************************/
+
+	static Result<Void> fold(final Result<?>... results) {
+		return fold(Arrays.asList(results));
+	}
+	static Result<Void> fold(final List<Result<?>> results) {
+		return results.stream()
+				.filter(Result::isErr)
+				.map(Result::expectErr)
+				.reduce(AnyError::join)
+				.map(Result::<Void>err)
+				.orElseGet(Result::ok);
+	}
 
 	static <O> Result<O> fail(final String errorMessage) {
 		return err(new StringError(errorMessage));
