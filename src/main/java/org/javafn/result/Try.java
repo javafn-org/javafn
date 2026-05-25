@@ -79,7 +79,7 @@ public class Try {
      * }</pre>
      * @param fn the supplier that produces an O and can throw an exception
      */
-    public static <O> Result<AnyError, O> toGet(final ThrowingSupplier<O> fn) {
+    public static <O> Result<O> toGet(final ThrowingSupplier<O> fn) {
         final O o;
         try {
             o = fn.get();
@@ -135,7 +135,7 @@ public class Try {
      * }</pre>
      * @param fn the Runnable that can throw an exception
      */
-    public static Result<AnyError, Void> to(final ThrowingRunnable fn) {
+    public static Result<Void> to(final ThrowingRunnable fn) {
         try {
             fn.run();
         } catch (final Exception e) {
@@ -168,7 +168,7 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #to(ThrowingRunnable)}.
      * @param fn the consumer that can throw an exception
      */
-    public static <T> Function<T, Result<AnyError, Void>> toUse(final ThrowingConsumer<T> fn) {
+    public static <T> Function<T, Result<Void>> toUse(final ThrowingConsumer<T> fn) {
         return t -> {
             try {
                 fn.accept(t);
@@ -204,7 +204,7 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #toGet(ThrowingSupplier)}.
      * @param fn the mapping function that can throw an exception
      */
-    public static <T, U> Function<T, Result<AnyError, U>> toMap(final ThrowingFunction<T, U> fn) {
+    public static <T, U> Function<T, Result<U>> toMap(final ThrowingFunction<T, U> fn) {
         return t -> {
             final U u;
             try {

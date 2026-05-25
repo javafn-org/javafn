@@ -12,16 +12,18 @@ import static org.javafn.result.Result.ok;
 
 public class ResultDemo {
     public static void main(String[] args) {
-        final Result<String, Long> res = testIt1();
-        System.out.println(res);
-        testIt2();
+        final Result<Long> res1 = testIt1();
+        System.out.println(res1);
+        final Result<Long> res2 = testIt2();
+        System.out.println(res2);
+        testIt3();
     }
 
-    public static Result<String, Long> testIt1() {
+    public static Result<Long> testIt1() {
         final Integer i;{
-            final var res1 = Result.<String, Integer>ok(67);
-            if (res1 instanceof Err<?, ?> e) {
-                return res1.as(e).into();
+            final var res1 = Result.ok(67);
+            if (res1 instanceof Err<?> e) {
+                return e.into();
             }
             i = res1.expectOk();
         }
@@ -29,9 +31,21 @@ public class ResultDemo {
         return ok(i.longValue());
     }
 
-    public static void testIt2() {
+    public static Result<Long> testIt2() {
+        final Integer i;{
+            final Result<Integer> res1 = Result.err("This is an error");
+            if (res1 instanceof Err<?> e) {
+                return e.into();
+            }
+            i = res1.expectOk();
+        }
+
+        return ok(i.longValue());
+    }
+
+    public static void testIt3() {
          final var theUrl = "http://localhost:8080/example";
-         Result.<AnyError, String>ok(theUrl)
+         Result.ok(theUrl)
                  .flatMap(Try.toMap(URL::new))
                  .flatMap(Try.toMap(URL::openConnection))
                  .flatMap(Try.toMap(URLConnection::getInputStream))

@@ -1,12 +1,10 @@
 package org.javafn.result;
 
-import org.javafn.result.Result.Err;
 import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.List;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.javafn.result.Result.err;
@@ -27,18 +25,18 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static <O> Result<AnyError, O> fail(final String errorMessage) {
+	static <O> Result<O> fail(final String errorMessage) {
 		return err(new StringError(errorMessage));
 	}
-	static <O> Result<AnyError, O> fail(final List<String> errorMessages) {
-		return err(new StringListError(errorMessages));
+	static <O> Result<O> fail(final List<String> errorMessages) {
+		return err(new ErrorList(errorMessages.stream().map(AnyError::from).toList()));
 	}
-	static <E extends Exception, O> Result<AnyError, O> fail(final E e) {
+	static <E extends Exception, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new ExceptionError<>(e, type));
 	}
-	static <E extends Enum<E>, O> Result<AnyError, O> fail(final E e) {
+	static <E extends Enum<E>, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new EnumError<>(e, type));
@@ -49,7 +47,7 @@ public interface AnyError {
 		return new StringError(errorMessage);
 	}
 	static AnyError from(final List<String> errorMessages) {
-		return new StringListError(errorMessages);
+		return new ErrorList(errorMessages.stream().map(AnyError::from).toList());
 	}
 	static <E extends Exception> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
@@ -60,6 +58,9 @@ public interface AnyError {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return new EnumError<>(e, type);
+	}
+	static AnyError joined(final List<AnyError> errors) {
+		return new ErrorList(errors);
 	}
 
 	/* *******************************************************************************/
@@ -88,19 +89,10 @@ public interface AnyError {
 		@Override public String toString() { return message; }
 	}
 
-	record StringListError(List<String> messages) implements AnyError {
-		public StringListError() { this(List.of()); }
-		@Override public String message() { return String.join("\n", messages); }
-		@Override public String toString() { return message(); }
-	}
-
 	record ExceptionError<E extends Exception>(E error, Class<E> type) implements AnyError {
 		@SuppressWarnings("unchecked")
 		public ExceptionError(final Exception x) {
 			this((E) x, (Class<E>) x.getClass());
-		}
-		public ExceptionError(final Err<E, ?> x) {
-			this(x.value());
 		}
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();
