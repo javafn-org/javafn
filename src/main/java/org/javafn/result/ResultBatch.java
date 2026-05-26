@@ -51,6 +51,15 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
     public static <O> ResultBatch<O> of(final Result<O>... results) {
         return Arrays.stream(results).collect(collector());
     }
+    public static ResultBatch<Integer> of(final IntResult... results) {
+        return Arrays.stream(results).map(IntResult::boxed).collect(collector());
+    }
+    public static ResultBatch<Long> of(final LongResult... results) {
+        return Arrays.stream(results).map(LongResult::boxed).collect(collector());
+    }
+    public static ResultBatch<Double> of(final DoubleResult... results) {
+        return Arrays.stream(results).map(DoubleResult::boxed).collect(collector());
+    }
 
     /**
      * Return a {@link Collector} over a stream of {@link Result} types producing a ResultBatch.
@@ -60,15 +69,33 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
         return Collector.<Result<O>, Acc<O>, ResultBatch<O>>of(
                 Acc::new, Acc::add, Acc::merge, Acc::finish);
     }
+    public static Collector<IntResult, ?, ResultBatch<Integer>> intCollector() {
+        return Collector.of(
+                Acc::new,
+                (Acc<Integer> acc, IntResult r) -> acc.add(r.boxed()),
+                Acc::merge, Acc::finish);
+    }
+    public static Collector<LongResult, ?, ResultBatch<Long>> longCollector() {
+        return Collector.of(
+                Acc::new,
+                (Acc<Long> acc, LongResult r) -> acc.add(r.boxed()),
+                Acc::merge, Acc::finish);
+    }
+    public static Collector<DoubleResult, ?, ResultBatch<Double>> doubleCollector() {
+        return Collector.of(
+                Acc::new,
+                (Acc<Double> acc, DoubleResult r) -> acc.add(r.boxed()),
+                Acc::merge, Acc::finish);
+    }
 
     /** true if {@link #errors} has one or more elements */
     public boolean hasErrors() { return !errors.isEmpty(); }
     /** true if {@link #oks} has one or more elements */
     public boolean hasOks() { return !oks.isEmpty(); }
     /** true if {@link #errors} has at least one element and {@link #oks} has no elements */
-    public boolean onlyErrors() { return !errors.isEmpty() && oks.isEmpty(); }
+    public boolean isOnlyErrors() { return !errors.isEmpty() && oks.isEmpty(); }
     /** true if {@link #errors} has no elements and {@link #oks} has at least one element */
-    public boolean onlyOks() { return errors.isEmpty() && !oks.isEmpty(); }
+    public boolean isOnlyOks() { return errors.isEmpty() && !oks.isEmpty(); }
     /** true if both {@link #errors} and {@link #oks} has at least one element each */
     public boolean hasBoth() { return !errors.isEmpty() && ! oks.isEmpty(); }
 
@@ -123,7 +150,7 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
     /**
      * Operate on the two sets of values without producing a new value.
      */
-    public void use(final BiConsumer<List<AnyError>, List<OK>> fn) {
+    public void consume(final BiConsumer<List<AnyError>, List<OK>> fn) {
         fn.accept(errors, oks);
     }
 

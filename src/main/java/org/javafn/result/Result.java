@@ -3,8 +3,13 @@ package org.javafn.result;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.DoubleToIntFunction;
+import java.util.function.DoubleToLongFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
+import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
 
 /**
@@ -220,6 +225,9 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * @param <Z> the new ok type
      */
     <Z> Result<Z> map(Function<OK, Z> fn);
+    IntResult mapToInt(ToIntFunction<OK> fn);
+    LongResult mapToLong(ToLongFunction<OK> fn);
+    DoubleResult mapToDouble(ToDoubleFunction<OK> fn);
 
     /**
      * Apply the supplied predicate to the wrapped error value or return true if this is an ok.
@@ -407,6 +415,9 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
         }
 
         @Override public <Z> Result<Z> map(final Function<OK, Z> fn) { return into(); }
+        @Override public IntResult mapToInt(ToIntFunction<OK> fn) { return IntResult.err(value); }
+        @Override public LongResult mapToLong(ToLongFunction<OK> fn) { return LongResult.err(value); }
+        @Override public DoubleResult mapToDouble(ToDoubleFunction<OK> fn) { return DoubleResult.err(value); }
 
         @Override public Result<OK> mapErr(final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
 
@@ -490,6 +501,9 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
         }
 
         @Override public <Z> Result<Z> map(final Function<OK, Z> fn) { return ok(fn.apply(value)); }
+        @Override public IntResult mapToInt(ToIntFunction<OK> fn) { return IntResult.ok(fn.applyAsInt(value)); }
+        @Override public LongResult mapToLong(ToLongFunction<OK> fn) { return LongResult.ok(fn.applyAsLong(value)); }
+        @Override public DoubleResult mapToDouble(ToDoubleFunction<OK> fn) { return DoubleResult.ok(fn.applyAsDouble(value)); }
 
         @Override public boolean filter(final Predicate<OK> fn) { return fn.test(value); }
 
@@ -545,7 +559,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * Namely, the text {@code res -> res} is repeated to the point of becoming noise.
      */
     final class Errs {
-        public static <OK, Z> Function<Result<OK>, Result<OK>> map(final Function<AnyError, AnyError> fn) {
+        public static <OK> Function<Result<OK>, Result<OK>> map(final Function<AnyError, AnyError> fn) {
             return res -> res.mapErr(fn);
         }
 
@@ -561,7 +575,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
             return res -> res.recoverIf(testFn, mapFn);
         }
 
-        public static <OK, Z> Function<Result<OK>, Result<OK>> flatRecover(
+        public static <OK> Function<Result<OK>, Result<OK>> flatRecover(
                 final Function<AnyError, Result<OK>> fn) {
             return res -> res.flatRecover(fn);
         }
@@ -621,6 +635,15 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
 
         public static <OK> Consumer<Result<OK>> ifOk(final Consumer<OK> fn) {
             return res -> res.ifOk(fn);
+        }
+        public static <OK> Function<Result<OK>, IntResult> mapToInt(ToIntFunction<OK> fn) {
+            return res -> res.mapToInt(fn);
+        }
+        public static <OK> Function<Result<OK>, LongResult> mapToLong(ToLongFunction<OK> fn) {
+            return res -> res.mapToLong(fn);
+        }
+        public static <OK> Function<Result<OK>, DoubleResult> mapToLong(ToDoubleFunction<OK> fn) {
+            return res -> res.mapToDouble(fn);
         }
 
         private Oks() {
