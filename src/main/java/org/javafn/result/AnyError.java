@@ -21,11 +21,14 @@ import static org.javafn.result.Result.ok;
  */
 public interface AnyError {
 
+	enum Severity { FAIL, WARN }
+
 	String message();
 	default AnyError join(AnyError that) {
 		if (that == null) return this;
 		return new ErrorList(List.of(this, that));
 	}
+	default Severity severity() { return Severity.FAIL; }
 
 	/* *******************************************************************************/
 
