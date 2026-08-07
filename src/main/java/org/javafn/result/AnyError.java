@@ -9,6 +9,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -88,7 +89,12 @@ public interface AnyError {
 	static <E extends Exception, O> Result<AnyError, O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return err(new ExceptionError<>(e, type));
+		return err(new ExceptionError<>(e, type, Optional.empty()));
+	}
+	static <E extends Exception, O> Result<AnyError, O> fail(final E e, final String msgPrefix) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return err(new ExceptionError<>(e, type, Optional.ofNullable(msgPrefix)));
 	}
 	static <E extends Enum<E>, O> Result<AnyError, O> fail(final E e) {
 		@SuppressWarnings("unchecked")
@@ -106,7 +112,12 @@ public interface AnyError {
 	static <E extends Exception> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return new ExceptionError<>(e, type);
+		return new ExceptionError<>(e, type, Optional.empty());
+	}
+	static <E extends Exception> AnyError from(final E e, final String msgPrefix) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return new ExceptionError<>(e, type, Optional.ofNullable(msgPrefix));
 	}
 	static <E extends Enum<E>> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
@@ -148,10 +159,17 @@ public interface AnyError {
 		@Override public String toString() { return message(); }
 	}
 
-	record ExceptionError<E extends Exception>(E error, Class<E> type) implements AnyError {
+	record ExceptionError<E extends Exception>(E error, Class<E> type, Optional<String> msgPrefix) implements AnyError {
+		@SuppressWarnings("unchecked")
+		public ExceptionError(final Exception x, final String prefixMsg) {
+			this((E) x, (Class<E>) x.getClass(), Optional.ofNullable(prefixMsg));
+		}
+		public ExceptionError(final Err<E, ?> x, final String prefixMsg) {
+			this(x.get(), prefixMsg);
+		}
 		@SuppressWarnings("unchecked")
 		public ExceptionError(final Exception x) {
-			this((E) x, (Class<E>) x.getClass());
+			this((E) x, (Class<E>) x.getClass(), Optional.empty());
 		}
 		public ExceptionError(final Err<E, ?> x) {
 			this(x.get());
@@ -159,6 +177,7 @@ public interface AnyError {
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();
 			final PrintWriter pw = new PrintWriter(sw);
+			msgPrefix.ifPresent(pw::println);
 			error.printStackTrace(pw);
 			pw.flush();
 			return sw.toString();
