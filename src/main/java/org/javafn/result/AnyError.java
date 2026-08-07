@@ -45,7 +45,7 @@ public interface AnyError {
 	}
 
 	static <O> Result<O> fail(final String errorMessage) {
-		return err(new StringError(errorMessage));
+		return err(new StringError(errorMessage, Severity.FAIL));
 	}
 	static <O> Result<O> fail(final List<String> errorMessages) {
 		return err(new ErrorList(errorMessages.stream().map(AnyError::from).toList()));
@@ -53,17 +53,34 @@ public interface AnyError {
 	static <E extends Exception, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return err(new ExceptionError<>(e, type));
+		return err(new ExceptionError<>(e, type, Severity.FAIL));
 	}
 	static <E extends Enum<E>, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return err(new EnumError<>(e, type));
+		return err(new EnumError<>(e, type,  Severity.FAIL));
+	}
+
+	static <O> Result<O> warn(final String errorMessage) {
+		return err(new StringError(errorMessage, Severity.WARN));
+	}
+	static <O> Result<O> warn(final List<String> errorMessages) {
+		return err(new ErrorList(errorMessages.stream().map(AnyError::from).toList()));
+	}
+	static <E extends Exception, O> Result<O> warn(final E e) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return err(new ExceptionError<>(e, type, Severity.WARN));
+	}
+	static <E extends Enum<E>, O> Result<O> warn(final E e) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return err(new EnumError<>(e, type,  Severity.WARN));
 	}
 	/* *******************************************************************************/
 
 	static AnyError from(final String errorMessage) {
-		return new StringError(errorMessage);
+		return new StringError(errorMessage, Severity.FAIL);
 	}
 	static AnyError from(final List<String> errorMessages) {
 		return new ErrorList(errorMessages.stream().map(AnyError::from).toList());
@@ -71,12 +88,29 @@ public interface AnyError {
 	static <E extends Exception> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return new ExceptionError<>(e, type);
+		return new ExceptionError<>(e, type, Severity.FAIL);
 	}
 	static <E extends Enum<E>> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return new EnumError<>(e, type);
+		return new EnumError<>(e, type,  Severity.FAIL);
+	}
+
+	static AnyError from(final String errorMessage, final Severity severity) {
+		return new StringError(errorMessage, severity);
+	}
+	static AnyError from(final List<String> errorMessages, final Severity severity) {
+		return new ErrorList(errorMessages.stream().map(msg -> AnyError.from(msg, severity)).toList());
+	}
+	static <E extends Exception> AnyError from(final E e, final Severity severity) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return new ExceptionError<>(e, type, severity);
+	}
+	static <E extends Enum<E>> AnyError from(final E e, final Severity severity) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return new EnumError<>(e, type, severity);
 	}
 	static AnyError joined(final List<AnyError> errors) {
 		return new ErrorList(errors);
@@ -102,16 +136,29 @@ public interface AnyError {
 				return new ErrorList(Data.append(errors, that));
 			}
 		}
+		@Override
+		public Severity severity() {
+			if (errors.isEmpty()
+					|| errors.stream().map(AnyError::severity).anyMatch(s -> s.equals(Severity.FAIL))) {
+				return Severity.FAIL;
+			} else {
+				return Severity.WARN;
+			}
+		}
 	}
 
-	record StringError(String message) implements AnyError {
+	record StringError(String message, Severity severity) implements AnyError {
 		@Override public String toString() { return message; }
 	}
 
-	record ExceptionError<E extends Exception>(E error, Class<E> type) implements AnyError {
+	record ExceptionError<E extends Exception>(E error, Class<E> type, Severity severity) implements AnyError {
 		@SuppressWarnings("unchecked")
 		public ExceptionError(final Exception x) {
-			this((E) x, (Class<E>) x.getClass());
+			this((E) x, (Class<E>) x.getClass(), Severity.FAIL);
+		}
+		@SuppressWarnings("unchecked")
+		public ExceptionError(final Exception x, final Severity severity) {
+				this((E) x, (Class<E>) x.getClass(), severity);
 		}
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();
@@ -123,7 +170,7 @@ public interface AnyError {
 		@Override public String toString() { return message(); }
 	}
 
-	record EnumError<E extends Enum<E>>(E error, Class<E> type) implements AnyError {
+	record EnumError<E extends Enum<E>>(E error, Class<E> type, Severity severity) implements AnyError {
 		@Override public String message() { return error.name(); }
 		@Override public String toString() { return message(); }
 	}
