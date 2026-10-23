@@ -46,6 +46,11 @@ public interface AnyError {
 		return new ErrorList(List.of(this, that));
 	}
 
+	/** Turn this AnyError into an Err Result */
+	default <T> Result<T> fail() {
+		return Result.err(this);
+	}
+
 	/* *******************************************************************************/
 
 	static Result<Void> fold(final Result<?>... results) {
