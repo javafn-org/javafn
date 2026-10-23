@@ -1,22 +1,15 @@
 package org.javafn.result;
 
-import org.javafn.result.Result;
-import org.javafn.result.Result.Err;
-import org.javafn.result.Result.Ok;
-import org.javafn.util.Util;
+import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.javafn.result.Result.err;
-import static org.javafn.result.Result.ok;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,
@@ -26,77 +19,64 @@ import static org.javafn.result.Result.ok;
  */
 public interface AnyError {
 
+	/**
+	 * Get the message associated with this error.
+	 */
 	String message();
+
+	/**
+	 * If this error wraps an ExceptionError, get the exception.  If it wraps anything else, construct a new
+	 * RuntimeException from the message and return it.  The stack trace of the new exception will be the
+	 * call site of this function, which may not be terribly useful.  This function is meant to be used
+	 * in conjunction with Try, where the error is guaranteed to be an ExceptionError, but there's no
+	 * way to capture this in the type system.
+	 */
+	default Exception except() {
+		return new RuntimeException(message());
+	}
+
+	/**
+	 * Construct a new ErrorList error type by joining that instance with this.
+	 */
 	default AnyError join(AnyError that) {
 		if (that == null) return this;
+		if (that instanceof ErrorList el) {
+			return new ErrorList(Data.append(List.<AnyError>of(this), el.errors()));
+		}
 		return new ErrorList(List.of(this, that));
 	}
 
 	/* *******************************************************************************/
 
-	@SafeVarargs
-    static VoidResult<AnyError> joined(final Result<AnyError, ?>... results) {
-		return joined(Arrays.asList(results));
+	static Result<Void> fold(final Result<?>... results) {
+		return fold(Arrays.asList(results));
 	}
-	static VoidResult<AnyError> joined(final List<? extends Result<AnyError, ?>> results) {
+	static Result<Void> fold(final List<Result<?>> results) {
 		return results.stream()
 				.filter(Result::isErr)
-				.map(r -> r.asErr().get())
+				.map(Result::expectErr)
 				.reduce(AnyError::join)
-				.<VoidResult<AnyError>>map(VoidResult::err)
-				.orElse(VoidResult.ok());
+				.map(Result::<Void>err)
+				.orElseGet(Result::ok);
 	}
-	static <K, J, L> Result<AnyError, List<L>> joined(
-			final List<K> values,
-			final Function<K, Result<AnyError, J>> toRes,
-			final Function<K, L> okMapper) {
-		return values.stream()
-				.map(toRes)
-				.filter(Result::isErr)
-				.map(r -> r.asErr().get())
-				.reduce(AnyError::join)
-				.<Result<AnyError, List<L>>>map(Result::err)
-				.orElseGet(() -> ok(values.stream()
-						.map(okMapper)
-						.toList()));
-	}
-//	static <K> Result<AnyError, List<K>> joined(final Result<AnyError, K>... results) {
-//		return Arrays.stream(results)
-//				.filter(Result::isErr)
-//				.map(r -> r.asErr().get())
-//				.reduce(AnyError::join)
-//				.<Result<AnyError, List<K>>>map(Result::err)
-//				.orElseGet(() -> ok(Arrays.stream(results).map(r -> r.asOk().get()).toList()));
-//	}
-//	static <K, J> Result<AnyError, List<J>> joined(final Function<K, J> fn, final Result<AnyError, K>... results) {
-//		return Arrays.stream(results)
-//				.filter(Result::isErr)
-//				.map(r -> r.asErr().get())
-//				.reduce(AnyError::join)
-//				.<Result<AnyError, List<J>>>map(Result::err)
-//				.orElseGet(() -> ok(Arrays.stream(results)
-//						.map(r -> r.asOk().get())
-//						.map(fn)
-//						.toList()));
-//	}
 
-	static <O> Result<AnyError, O> fail(final String errorMessage) {
+	static <O> Result<O> fail(final String errorMessage) {
 		return err(new StringError(errorMessage));
 	}
-	static <O> Result<AnyError, O> fail(final List<String> errorMessages) {
-		return err(new StringListError(errorMessages));
+	static <O> Result<O> fail(final List<String> errorMessages) {
+		return err(new ErrorList(errorMessages.stream().map(AnyError::from).toList()));
 	}
-	static <E extends Exception, O> Result<AnyError, O> fail(final E e) {
+	static <E extends Exception, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new ExceptionError<>(e, type, Optional.empty()));
 	}
-	static <E extends Exception, O> Result<AnyError, O> fail(final E e, final String msgPrefix) {
+	static <E extends Exception, O> Result<O> fail(final E e, final String msgPrefix) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new ExceptionError<>(e, type, Optional.ofNullable(msgPrefix)));
 	}
-	static <E extends Enum<E>, O> Result<AnyError, O> fail(final E e) {
+	static <E extends Enum<E>, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new EnumError<>(e, type));
@@ -107,7 +87,7 @@ public interface AnyError {
 		return new StringError(errorMessage);
 	}
 	static AnyError from(final List<String> errorMessages) {
-		return new StringListError(errorMessages);
+		return new ErrorList(errorMessages.stream().map(AnyError::from).toList());
 	}
 	static <E extends Exception> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
@@ -124,27 +104,28 @@ public interface AnyError {
 		final Class<E> type = (Class<E>) e.getClass();
 		return new EnumError<>(e, type);
 	}
+	static AnyError joined(final List<AnyError> errors) {
+		return new ErrorList(errors);
+	}
 
 	/* *******************************************************************************/
 
-	record ErrorList(List<AnyError> errors, Supplier<String> toMessage) implements AnyError {
-		private static final Supplier<String> EMPTY = () -> "";
+	record ErrorList(List<AnyError> errors) implements AnyError {
 		public ErrorList() {
-			this(List.of(), EMPTY);
+			this(List.of());
 		}
-		public ErrorList(final List<AnyError> errors) {
-			this(errors, () -> errors.stream()
+		@Override public String message() {
+			return errors.stream()
 					.map(AnyError::message)
-					.collect(Collectors.joining("\n")));
+					.collect(Collectors.joining("\n"));
 		}
-		@Override public String message() { return toMessage.get(); }
 		@Override
 		public ErrorList join(final AnyError that) {
 			if (that == null) return this;
 			if (that instanceof ErrorList thatList) {
-				return new ErrorList(Util.append(errors, thatList.errors));
+				return new ErrorList(Data.append(errors, thatList.errors));
 			} else {
-				return new ErrorList(Util.append(errors, that));
+				return new ErrorList(Data.append(errors, that));
 			}
 		}
 	}
@@ -153,26 +134,10 @@ public interface AnyError {
 		@Override public String toString() { return message; }
 	}
 
-	record StringListError(List<String> messages) implements AnyError {
-		public StringListError() { this(List.of()); }
-		@Override public String message() { return String.join("\n", messages); }
-		@Override public String toString() { return message(); }
-	}
-
 	record ExceptionError<E extends Exception>(E error, Class<E> type, Optional<String> msgPrefix) implements AnyError {
-		@SuppressWarnings("unchecked")
-		public ExceptionError(final Exception x, final String prefixMsg) {
-			this((E) x, (Class<E>) x.getClass(), Optional.ofNullable(prefixMsg));
-		}
-		public ExceptionError(final Err<E, ?> x, final String prefixMsg) {
-			this(x.get(), prefixMsg);
-		}
 		@SuppressWarnings("unchecked")
 		public ExceptionError(final Exception x) {
 			this((E) x, (Class<E>) x.getClass(), Optional.empty());
-		}
-		public ExceptionError(final Err<E, ?> x) {
-			this(x.get());
 		}
 		@Override public String message() {
 			final StringWriter sw = new StringWriter();

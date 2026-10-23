@@ -1,21 +1,13 @@
 package org.javafn.result;
 
-import org.javafn.result.LongResultCollection.LongResultCollector;
-import org.javafn.result.Result.ErrProjection;
-
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
-import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
+import java.util.function.DoubleToIntFunction;
+import java.util.function.DoubleToLongFunction;
 import java.util.function.Function;
-import java.util.function.IntConsumer;
-import java.util.function.IntFunction;
 import java.util.function.LongConsumer;
 import java.util.function.LongFunction;
 import java.util.function.LongPredicate;
@@ -23,317 +15,483 @@ import java.util.function.LongToDoubleFunction;
 import java.util.function.LongToIntFunction;
 import java.util.function.LongUnaryOperator;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.function.ToLongFunction;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.stream.Collector;
 
-public abstract class LongResult<ERR> {
+public interface LongResult {
+    /** Create a new Result wrapping a successful integer value. */
+    static LongResult ok(final long ok) {
+        return new LongResult.Ok(ok);
+    }
 
-	public static <EE> LongResultCollector<EE> collector() { return new LongResultCollector<>(); }
+    /** Create a new LongResult wrapping an error value. */
+    static LongResult err(final AnyError err) {
+        return new LongResult.Err(err);
+    }
+    /** Create a new LongResult wrapping an error message. */
+    static LongResult err(final String errorMessage) {
+        return new LongResult.Err(AnyError.from(errorMessage));
+    }
+    /** Create a new LongResult wrapping a list of error messages. */
+    static LongResult err(final List<String> errorMessages) {
+        return new LongResult.Err(AnyError.from(errorMessages));
+    }
+    /** Create a new LongResult wrapping an exception. */
+    static <E extends Exception, OK> LongResult err(final E e) {
+        return new LongResult.Err(AnyError.from(e));
+    }
 
-	public interface Err<E> {
-		E get();
-		E orElseThrow(LongFunction<RuntimeException> exceptionMapper);
-		E orElseMap(LongFunction<E> fn);
-		Optional<E> opt();
-		boolean filter(Predicate<E> fn);
-		LongResult<E> peek(Consumer<E> fn);
-		LongResult<E> filterMap(Predicate<E> p, ToLongFunction<E> fn);
-		<Z> LongResult<Z> map(Function<E, Z> fn);
+    /**
+     * Collect a stream of {@link LongResult}s into a {@link ResultBatch}.
+     * Since we don't have primitive lists, this function boxes the ok results.
+     * @return a collector that generates a ResultBatch
+     */
+    static Collector<LongResult, ?, ResultBatch<Long>> batch() {
+        return ResultBatch.longCollector();
+    }
 
-		<Z> Result<E, Z> into();
-		<Z> List<Result<E, Z>> intoList();
-		<Z> Stream<Result<E, Z>> intoStream();
-		<Z> LongResult<Z> flatMap(Function<E, LongResult<Z>> fn);
-		static <EE> List<LongResult<EE>> Wrap(List<EE> e)
-		{ return e.stream().map(LongResult::err).collect(Collectors.toList()); }
+    /**
+     * Return true if this is an err variant, false otherwise.  This function is useful in a stream pipeline.
+     * More general usage would involve an instanceof check with pattern matching.
+     * @return true iff this is an err variant
+     */
+    default boolean isErr() { return false; }
 
-		static <Z, EE> Function<LongResult<EE>, LongResult<Z>> Map(Function<EE, Z> fn) {
-			return result -> result.asErr().map(fn);
-		}
-		static <Z, EE> Function<LongResult<EE>, Result<EE, Z>> Into() {
-			return result -> Result.err(result.asErr().get());
-		}
-		@SuppressWarnings("unused")
-		static <Z, EE> Function<LongResult<EE>, Result<EE, Z>> Into(final Class<Z> clazz)
-		{ return result -> result.asErr().into(); }
-		static <EE, ZZ> Function<LongResult<EE>, LongResult<ZZ>> FlatMap(Function<EE, LongResult<ZZ>> fn)
-		{ return result -> result.asErr().flatMap(fn); }
-		static <EE> Function<LongResult<EE>, EE> Get() {
-			return result -> result.asErr().get();
-		}
-		static <EE> Function<LongResult<EE>, EE> OrElseMap(LongFunction<EE> fn)
-		{ return result -> result.asErr().orElseMap(fn); }
-		static <EE> Function<LongResult<EE>, EE> OrElseThrow(LongFunction<RuntimeException> exceptionMapper)
-		{ return result -> result.asErr().orElseThrow(exceptionMapper); }
-		static <EE> Function<LongResult<EE>, Optional<EE>> Opt() {
-			return result -> result.asErr().opt();
-		}
-		static <EE> Predicate<LongResult<EE>> Filter(Predicate<EE> fn)
-		{ return result -> result.asErr().filter(fn); }
-		static <EE> Consumer<LongResult<EE>> Peek(Consumer<EE> fn) { return result -> result.asErr().peek(fn); }
-		static <EE> Function<LongResult<EE>, LongResult<EE>> FilterMap(Predicate<EE> p, ToLongFunction<EE> fn)
-		{ return result -> result.asErr().filterMap(p, fn); }
-	}
+    /**
+     * Return true if this is an ok variant, false otherwise.
+     * @return true iff this is an ok variant
+     */
+    default boolean isOk() { return false; }
 
-	/**
-	 * A {@link Result.Projection} of a Result as an Ok value, which may or may not be present.
-	 */
-	public interface Ok<E> {
-		long get();
-		long orElseThrow(Function<E, RuntimeException> exceptionMapper);
-		long orElseMap(ToLongFunction<E> fn);
-		OptionalLong opt();
-		boolean filter(LongPredicate fn);
-		LongResult<E> peek(LongConsumer fn);
-		LongResult<E> filterMap(LongPredicate p, LongFunction<E> fn);
-		LongResult<E> map(LongUnaryOperator fn);
-		IntResult<E> mapToInt(LongToIntFunction fn);
-		DoubleResult<E> mapToDouble(LongToDoubleFunction fn);
-		<Z> Result<E, Z> mapToObj(LongFunction<Z> fn);
-		<Z> LongResult<Z> into();
-		<Z> List<LongResult<Z>> intoList();
-		<Z> Stream<LongResult<Z>> intoStream();
-		LongResult<E> flatMap(LongFunction<LongResult<E>> fn);
+    /**
+     * Unsafe operation, only safe in a branch opposite a test against ok
+     * or inside a branch that checked {@link #isErr()}.
+     * Access the error value or throw an exception.
+     * <pre>{@code
+     * final LongResult res = ...;
+     * if (res instanceof Ok o) {
+     *     final long v = o.value();
+     * } else {
+     *     AnyError e = res.expectErr();
+     * }
+     * }</pre>
+     * @return the error value in this LongResult
+     * @throws IllegalStateException if this LongResult is not actually an Err
+     */
+    default AnyError expectErr() {
+        throw new IllegalStateException("Expected LongResult to be an Err instance, but it was not");
+    }
 
-		static <EE> Function<LongResult<EE>, LongResult<EE>> Map(LongUnaryOperator fn)
-		{ return result -> result.asOk().map(fn); }
-		static <Z, EE> Function<LongResult<EE>, LongResult<Z>> Into() { return result -> result.asOk().into(); }
-		@SuppressWarnings("unused")
-		static <Z, EE> Function<LongResult<EE>, LongResult<Z>> Into(final Class<Z> clazz)
-		{ return result -> result.asOk().into(); }
-		static <EE> Function<LongResult<EE>, LongResult<EE>> FlatMap(LongFunction<LongResult<EE>> fn)
-		{ return result -> result.asOk().flatMap(fn); }
-		static <EE> ToLongFunction<LongResult<EE>> Get() { return result -> result.asOk().get(); }
-		static <EE> ToLongFunction<LongResult<EE>> OrElseMap(ToLongFunction<EE> fn)
-		{ return result -> result.asOk().orElseMap(fn); }
-		static <EE> ToLongFunction<LongResult<EE>> OrElseThrow(Function<EE, RuntimeException> exceptionMapper)
-		{ return result -> result.asOk().orElseThrow(exceptionMapper); }
-		static <EE> Function<LongResult<EE>, OptionalLong> Opt() { return result -> result.asOk().opt(); }
-		static <EE> Predicate<LongResult<EE>> Filter(LongPredicate fn)
-		{ return result -> result.asOk().filter(fn); }
-		static <EE> Consumer<LongResult<EE>> Peek(LongConsumer fn) { return result -> result.asOk().peek(fn); }
-		static <EE> Function<LongResult<EE>, LongResult<EE>> FilterMap(LongPredicate p, LongFunction<EE> fn)
-		{ return result -> result.asOk().filterMap(p, fn); }
-	}
+    /**
+     * Unsafe operation, only safe in a branch opposite a test against err
+     * or inside a branch that checked {@link #isOk()}.
+     * Access the ok value or throw an exception.
+     * <pre>{@code
+     * final LongResult res = ...;
+     * if (res instanceof Err e) {
+     *     return e.into();
+     * }
+     * final long v = o.value();
+     * }</pre>
+     * @return the ok value in this Result
+     * @throws IllegalStateException if this Result is not actually an Ok
+     */
+    default long expectOk() {
+        throw new IllegalStateException("Expected LongResult to be an Ok instance, but it was not");
+    }
 
-	/**
-	 * An implementation of Result and Projection representing an Err value.
-	 */
-	public static final class ErrProjection<E> extends LongResult<E> implements Err<E> {
-		final E errValue;
-		private ErrProjection(final Sealed _token, final E _errValue) { super(_token, true); errValue = _errValue; }
+    default Optional<AnyError> optErr() {
+        return Optional.empty();
+    }
 
-		@Override public E get() { return errValue; }
-		@Override public E orElseThrow(final LongFunction<RuntimeException> unused) { return errValue; }
-		@Override public Optional<E> opt() { return Optional.ofNullable(errValue); }
-		@Override public boolean filter(final Predicate<E> fn) { return fn.test(errValue); }
-		@Override public LongResult<E> peek(final Consumer<E> fn) { fn.accept(errValue); return this; }
-		@Override public <Z> LongResult<Z> map(final Function<E, Z> fn) { return err(fn.apply(errValue)); }
-		@Override public <Z> Result<E, Z> into() { return Result.err(errValue); }
-		@Override public <Z> List<Result<E, Z>> intoList() { return Collections.singletonList(Result.err(errValue)); }
-		@Override public <Z> Stream<Result<E, Z>> intoStream() { return Stream.of(Result.err(errValue)); }
-		@Override public <Z> LongResult<Z> flatMap(final Function<E, LongResult<Z>> fn) { return fn.apply(errValue); }
-		@Override public E orElseMap(LongFunction<E> unused) { return errValue; }
-		@Override public LongResult<E> filterMap(final Predicate<E> p, final ToLongFunction<E> fn)
-		{ return p.test(errValue) ? ok(fn.applyAsLong(errValue)) : this; }
+    default OptionalLong opt() {
+        return OptionalLong.empty();
+    }
 
-		@Override public Ok<E> asOk() { return new EmptyOkProjection<>(this); }
+    /**
+     * Perform the appropriate mapping operation on this LongResult.
+     * @param fnErr the function to apply if this is an Err
+     * @param fnOk the function to apply if this is an Ok
+     * @return the result with the appropriate function applied
+     */
+    LongResult map(Function<AnyError, AnyError> fnErr, LongUnaryOperator fnOk);
 
-		@Override public Err<E> asErr() { return this; }
-		@Override public Result<Long, E> swap() { return Result.ok(errValue); }
-		@Override public <MERR, MOK> Result<MERR, MOK> mapResult(
-				final Function<E, MERR> fnErr, final LongFunction<MOK> unused)
-		{ return Result.err(fnErr.apply(errValue)); }
-		@Override public LongResult<E> peek(final Consumer<E> fnErr, final LongConsumer unused)
-		{ fnErr.accept(errValue); return this; }
-		@Override public <T> T reduce(final Function<E, T> fnErr, final LongFunction<T> unused)
-		{ return fnErr.apply(errValue); }
-		@Override public String toString() { return "Err[" + errValue + "]"; }
+    /**
+     * Apply the mapping function to the error value if this is an Err, otherwise return this
+     * @param fn the function to apply to an error value
+     * @return a new result with the error mapped or this unmodified if this is an ok
+     */
+    default LongResult mapErr(Function<AnyError, AnyError> fn) { return this; }
 
-		@Override public int hashCode() { return Objects.hashCode(errValue); }
-		@Override public boolean equals(final Object other) {
-			if (other instanceof ErrProjection<?> that) {
-				return Objects.equals(errValue, that.errValue);
-			} else if (other instanceof EmptyOkProjection<?> that) {
-				return Objects.equals(errValue, that.errResult.errValue);
-			} else {
-				return false;
-			}
-		}
-	}
+    /**
+     * Apply the mapping function to the ok value if this is an Ok, otherwise return this
+     * @param fn the function to apply to an ok value
+     * @return a new result with the ok mapped or this unmodified if this is an err
+     */
+    default LongResult map(final LongUnaryOperator fn) { return this; };
 
-	public static final class OkProjection<E> extends LongResult<E> implements Ok<E> {
-		private final long okValue;
-		private OkProjection(final Sealed _token, final long _okValue) { super(_token, false); okValue = _okValue; }
+    IntResult mapToInt(LongToIntFunction fn);
+    DoubleResult mapToDouble(LongToDoubleFunction fn);
+    /**
+     * Convert this LongResult into a {@link Result<Z>} by calling the supplied mapping function.
+     * @return a Result with this ok long value mapped to an object or the err value unchanged
+     */
+    <Z> Result<Z> mapToObj(LongFunction<Z> fn);
 
-		@Override public long get() { return okValue; }
-		@Override public long orElseThrow(final Function<E, RuntimeException> unused) { return okValue; }
-		@Override public long orElseMap(ToLongFunction<E> unused) { return okValue; }
-		@Override public OptionalLong opt() { return OptionalLong.of(okValue); }
-		@Override public boolean filter(final LongPredicate fn) { return fn.test(okValue); }
-		@Override public LongResult<E> peek(final LongConsumer fn) { fn.accept(okValue); return this; }
-		@Override public LongResult<E> map(final LongUnaryOperator fn) { return ok(fn.applyAsLong(okValue)); }
-		@Override public IntResult<E> mapToInt(final LongToIntFunction fn) { return IntResult.ok(fn.applyAsInt(okValue)); }
-		@Override public DoubleResult<E> mapToDouble(final LongToDoubleFunction fn) { return DoubleResult.ok(fn.applyAsDouble(okValue)); }
-		@Override public <Z> Result<E, Z> mapToObj(final LongFunction<Z> fn) { return Result.ok(fn.apply(okValue)); }
-		@Override public <Z> LongResult<Z> into() { return ok(okValue); }
-		@Override public <Z> List<LongResult<Z>> intoList() { return Collections.singletonList(ok(okValue)); }
-		@Override public <Z> Stream<LongResult<Z>> intoStream() { return Stream.of(ok(okValue)); }
-		@Override public LongResult<E> flatMap(final LongFunction<LongResult<E>> fn) { return fn.apply(okValue); }
-		@Override public LongResult<E> filterMap(final LongPredicate p, final LongFunction<E> fn)
-		{ return p.test(okValue) ? err(fn.apply(okValue)) : this; }
+    /**
+     * Convert this LongResult into a {@link Result<Long>} by boxing the wrapped ok or passing the error unchanged.
+     * @return a Result with this ok long value boxed or the err value unchanged
+     */
+    Result<Long> boxed();
 
-		@Override public Ok<E> asOk() { return this; }
-		@Override public Err<E> asErr() { return new EmptyErrProjection<>(this); }
+    /**
+     * Apply the supplied predicate to the wrapped error value or return true if this is an ok.
+     * Semantically, {@code return (this instanceof Ok || fn.test(err))}
+     * If you want {@code &&} semantics, use {@link #isErrAnd(Predicate)}
+     * @param fn the predicate to apply to the error value
+     * @return true if this is not an error or the result of applying the predicate to the error value
+     */
+    default boolean filterErr(Predicate<AnyError> fn) {
+        return true;
+    }
 
-		@Override public Result<Long, E> swap() { return Result.err(okValue); }
-		@Override public <MERR, MOK> Result<MERR, MOK> mapResult(
-				final Function<E, MERR> unused, final LongFunction<MOK> fnOk)
-		{ return Result.ok(fnOk.apply(okValue)); }
-		@Override public LongResult<E> peek(final Consumer<E> unused, final LongConsumer fnOk)
-		{ fnOk.accept(okValue); return this; }
-		@Override public <T> T reduce(final Function<E, T> unused, final LongFunction<T> fnOk)
-		{ return fnOk.apply(okValue); }
-		@Override public String toString() { return "Ok[" + okValue + "]"; }
+    /**
+     * Apply the supplied predicate to the wrapped ok value or return true if this is an err.
+     * Semantically, {@code return (this instanceof Err || fn.test(ok))}
+     * If you want {@code &&} semantics, use {@link #isOkAnd(LongPredicate)}
+     * @param fn the predicate to apply to the ok value
+     * @return true if this is not an ok or the result of applying the predicate to the ok value
+     */
+    default boolean filter(LongPredicate fn) {
+        return true;
+    }
 
-		@Override public int hashCode() { return Long.hashCode(okValue); }
-		@Override public boolean equals(final Object other) {
-			if (other instanceof OkProjection<?> that) {
-				return Objects.equals(okValue, that.okValue);
-			} else if (other instanceof EmptyErrProjection<?> that) {
-				return Objects.equals(okValue, that.okResult.okValue);
-			} else {
-				return false;
-			}
-		}
-	}
+    /**
+     * Apply the supplied predicate to the wrapped error value or return false if this is an ok.
+     * Semantically, {@code return (this instanceof Err && fn.test(err))}
+     * If you want {@code ||} semantics, use {@link #filterErr(Predicate)}
+     * @param fn the predicate to apply to the error value
+     * @return false if this is not an error or the result of applying the predicate to the error value
+     */
+    default boolean isErrAnd(Predicate<AnyError> fn) { return false; }
 
-	/**
-	 * An implementation of Projection representing the empty Err value of an Ok Result
-	 */
-	private static final class EmptyErrProjection<E> implements Err<E> {
-		private final OkProjection<E> okResult;
-		private EmptyErrProjection(final OkProjection<E> _okResult) { okResult = _okResult; }
+    /**
+     * Apply the supplied predicate to the wrapped ok value or return false if this is an error.
+     * Semantically, {@code return (this instanceof Ok && fn.test(ok))}
+     * If you want {@code ||} semantics, use {@link #filter(LongPredicate)}
+     * @param fn the predicate to apply to the ok value
+     * @return false if this is not an ok or the result of applying the predicate to the ok value
+     */
+    default boolean isOkAnd(LongPredicate fn) { return false; }
 
-		@Override public E get() { throw new NoSuchElementException("Trying to get an Err from an Ok Projection."); }
-		@Override public E orElseThrow(final LongFunction<RuntimeException> exceptionMapper)
-		{ throw exceptionMapper.apply(okResult.okValue); }
-		@Override public E orElseMap(final LongFunction<E> fn) { return fn.apply(okResult.okValue); }
-		@Override public Optional<E> opt() { return Optional.empty(); }
-		@Override public boolean filter(final Predicate<E> unused) { return true; }
-		@Override public LongResult<E> peek(final Consumer<E> unused) { return okResult; }
-		@Override public <Z> LongResult<Z> map(final Function<E, Z> unused) { return ok(okResult.okValue); }
-		@Override public <Z> Result<E, Z> into()
-		{ throw new NoSuchElementException("Trying to alter the error type of an Ok Result projected as an Err."); }
-		@Override public <Z> List<Result<E, Z>> intoList()
-		{ throw new NoSuchElementException("Trying to alter the error type of an Ok Result projected as an Err."); }
-		@Override public <Z> Stream<Result<E, Z>> intoStream()
-		{ throw new NoSuchElementException("Trying to alter the error type of an Ok Result projected as an Err."); }
-		@Override public <Z> LongResult<Z> flatMap(final Function<E, LongResult<Z>> fn) { return ok(okResult.okValue); }
-		@Override public LongResult<E> filterMap(final Predicate<E> unusedP, final ToLongFunction<E> unusedFn)
-		{ return okResult; }
-		@Override public String toString() { return okResult.toString(); }
+    /**
+     * Apply the supplied consumer to the wrapped err value, or if this is an ok, perform no operation.
+     * <strong>
+     *     This function is used to achieve side effects.
+     *     You are strongly encouraged to document the side effect if it involves mutating external state.
+     * </strong>
+     * In the most innocuous case, you're writing to a log.
+     * In other cases, you could be modifying a collection, for example,
+     * Collecting a list of errors before filtering them from the pipeline.
+     * @return this, unmodified
+     */
+    default LongResult ifErr(Consumer<AnyError> fn) {
+        return this;
+    }
 
-		@Override public int hashCode() { return okResult.hashCode(); }
-		@Override public boolean equals(final Object other) {
-			if (other instanceof EmptyErrProjection<?> that) {
-				return Objects.equals(okResult, that.okResult);
-			} else if (other instanceof OkProjection<?> that) {
-				return Objects.equals(okResult.okValue, that.okValue);
-			} else {
-				return false;
-			}
-		}
-	}
+    /**
+     * Apply the supplied consumer to the wrapped ok value, or if this is an error, perform no operation.
+     * <strong>
+     *     This function is used to achieve side effects.
+     *     You are strongly encouraged to document the side effect if it involves mutating external state.
+     * </strong>
+     * In the most innocuous case, you're writing to a log.
+     * In other cases, you could be modifying a collection, for example,
+     * when comparing entries from a database and entries from some other source of truth,
+     * collecting a delta as a side effect of some primary operation.
+     * You could remove processed entries from a list, and then anything left over after the pipeline runs
+     * are things that are not present in the other source.
+     * @param fn the consumer to apply to the wrapped ok value, performing side effects
+     * @return this, unmodified
+     */
+    default LongResult ifOk(LongConsumer fn) {
+        return this;
+    }
 
-	private static final class EmptyOkProjection<E> implements Ok<E> {
-		private final ErrProjection<E> errResult;
-		private EmptyOkProjection(final ErrProjection<E> _errResult) { errResult = _errResult; }
+    /**
+     * If this result is an err, apply the supplied predicate to determine if recovery is possible,
+     * and if that returns true, apply the supplied mapping function to the err value
+     * and return an ok result with the new value.
+     * @param testFn the predicate to apply to the err value
+     * @param mapFn the mapping function to apply to the err value
+     * @return a new result with the err value mapped to an ok if this is an err and the supplied predicate matches,
+     * otherwise return this unmodified
+     */
+    default LongResult recoverIf(Predicate<AnyError> testFn, ToLongFunction<AnyError> mapFn) { return this; }
 
-		@Override public long get() { throw new NoSuchElementException("Trying to get an Ok result from an Err Result."); }
-		@Override public long orElseThrow(final Function<E, RuntimeException> exceptionMapper)
-		{ throw exceptionMapper.apply(errResult.errValue); }
-		@Override public long orElseMap(final ToLongFunction<E> fn) { return fn.applyAsLong(errResult.errValue); }
-		@Override public OptionalLong opt() { return OptionalLong.empty(); }
-		@Override public boolean filter(final LongPredicate unused) { return true; }
-		@Override public LongResult<E> peek(final LongConsumer unused) { return errResult; }
-		@Override public LongResult<E> map(final LongUnaryOperator unused) { return err(errResult.errValue); }
-		@Override public IntResult<E> mapToInt(final LongToIntFunction fn) { return IntResult.err(errResult.errValue); }
-		@Override public DoubleResult<E> mapToDouble(final LongToDoubleFunction fn) { return DoubleResult.err(errResult.errValue); }
-		@Override public <Z> Result<E, Z> mapToObj(final LongFunction<Z> unused) { return Result.err(errResult.errValue); }
-		@Override public <Z> LongResult<Z> into()
-		{ throw new NoSuchElementException("Trying to alter the error type of an Err Result projected as an Ok."); }
-		@Override public <Z> List<LongResult<Z>> intoList()
-		{ throw new NoSuchElementException("Trying to alter the error type of an Err Result projected as an Ok."); }
-		@Override public <Z> Stream<LongResult<Z>> intoStream()
-		{ throw new NoSuchElementException("Trying to alter the error type of an Err Result projected as an Ok."); }
-		@Override public LongResult<E> flatMap(final LongFunction<LongResult<E>> unused) { return err(errResult.errValue); }
-		@Override public LongResult<E> filterMap(final LongPredicate unusedP, final LongFunction<E> unusedFn)
-		{ return errResult; }
-		@Override public String toString() { return errResult.toString(); }
+    /**
+     * If this result is an ok, apply the supplied predicate, and if that returns true, apply the
+     * supplied mapping function to the ok value and return an err result with the result.
+     * @param testFn the predicate to apply to the ok value
+     * @param mapFn the mapping function to apply to the ok value
+     * @return a new result with the ok value mapped to an err if this is an ok and the supplied predicate matches,
+     * otherwise return this unmodified
+     */
+    default LongResult failIf(LongPredicate testFn, LongFunction<AnyError> mapFn) { return this; }
 
-		@Override public int hashCode() { return errResult.hashCode(); }
-		@Override public boolean equals(final Object other) {
-			if (other instanceof EmptyOkProjection<?> that) {
-				return Objects.equals(errResult, that.errResult);
-			} else if (other instanceof ErrProjection<?> that) {
-				return Objects.equals(errResult.errValue, that.errValue);
-			} else {
-				return false;
-			}
-		}
-	}
+    /**
+     * Apply the supplied mapping function, which itself returns a Result, to this Result's err value if it is an err.
+     * If the mapping function returns an Err, return that err rather than an <pre>{@code Err<Err<o>,o>}</pre>.
+     * In other words, if the supplied mapping function would result in
+     * <pre>{@code
+     * Result<Result<Foo>, Foo> res2 = res1.mapOk(...);
+     * }</pre>
+     * this function "flattens" it to
+     * <pre>{@code
+     * Result<Foo> res2 = res1.flatRecover(...);
+     * }</pre>
+     * Comparable to {@link #flatMap(LongFunction)}, except calling the function on the Err value and returning a flat Result.
+     * @param fn a function that returns a result with the same ok type as this Result
+     * @return this, if this Result is already an ok, otherwise, the result of applying the function to the err value
+     */
+    LongResult flatRecover(Function<AnyError, LongResult> fn);
 
-	public static <EE> ErrProjection<EE> err(final EE err)
-	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, err); }
+    /**
+     * Apply the supplied mapping function, which itself returns a Result, to this Result's ok value if it is an ok.
+     * If the mapping function returns an Err, turn this into an Err rather than an <pre>{@code Ok<Err<o>>}</pre>.
+     * In other words, if the supplied mapping function would result in
+     * <pre>{@code
+     * Result<Result<Foo>> res2 = res1.mapOk(...);
+     * }</pre>
+     * this function "flattens" it to
+     * <pre>{@code
+     * Result<Foo> res2 = res1.flatMap(...);
+     * }</pre>
+     * Comparable to {@link #flatRecover(Function)}, except calling the function on the Ok value and returning a flat Result.
+     * @param fn a function that returns a result with the same error type as this Result
+     * @return this, if this Result is already an Err, otherwise, the result of applying the function to the ok value
+     */
+    LongResult flatMap(LongFunction<LongResult> fn);
 
-	@SafeVarargs
-	public static <EE, OO> ErrProjection<List<EE>> errList(final EE... errs)
-	{ return new ErrProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, Arrays.asList(errs)); }
+    /**
+     * Apply the appropriate mapping function and return the resulting value.
+     * @param fnErr the function to apply if this is an Err
+     * @param fnOk the function to apply if this is an Ok
+     * @return a value of some common type, produced by applying the appropriate mapping function
+     * @param <Z> the result type
+     */
+    <Z> Z reduce(Function<AnyError, Z> fnErr, LongFunction<Z> fnOk);
 
-	public static <EE> OkProjection<EE> ok(final long ok)
-	{ return new OkProjection<>(ADDITIONAL_SUBCLASSES_NOT_ALLOWED, ok); }
+    /**
+     * Call the appropriate side effect producing function and do not return anything.
+     * @param fnErr the function to apply if this is an Err
+     * @param fnOk the function to apply if this is an Ok
+     */
+    void consume(Consumer<AnyError> fnErr, LongConsumer fnOk);
 
-	public static <EE> LongResult<EE> okOrElse(final OptionalLong maybeOk, final Supplier<EE> errSupplier)
-	{ return maybeOk.isPresent() ? ok(maybeOk.getAsLong()) : err(errSupplier.get()); }
+    /**
+     * An LongResult implementation that wraps an error value, obtained by calling {@link LongResult#err(AnyError)}.
+     * To access {@link Err#value}, You should obtain an Err by doing an instanceof check
+     * <pre>{@code
+     * final Result<String> res = ...
+     * if (res instanceof Err e) {
+     *     final AnyError value = e.value();
+     * }
+     * }</pre>
+     */
+    record Err(AnyError value) implements LongResult {
 
-	public boolean isErr() { return isErr; }
-	public boolean isOk() { return isOk; }
+        @Override public boolean isErr() { return true; }
 
-	public abstract Err<ERR> asErr();
-	public abstract Ok<ERR> asOk();
+        @Override public AnyError expectErr() { return value; }
 
-	public abstract Result<Long, ERR> swap();
+        @Override public Optional<AnyError> optErr() { return Optional.ofNullable(value); }
 
-	public abstract <NEWERR, NEWOK> Result<NEWERR, NEWOK> mapResult(
-			Function<ERR, NEWERR> fnErr, LongFunction<NEWOK> fnOk);
-	public static <E, NEWERR, NEWOK> Function<IntResult<E>, Result<NEWERR, NEWOK>> MapResult(
-			final Function<E, NEWERR> fnErr, final IntFunction<NEWOK> fnOk)
-	{ return res -> res.mapResult(fnErr, fnOk); }
-	public abstract LongResult<ERR> peek(Consumer<ERR> fnErr, LongConsumer fnOk);
-	public static <E> Function<IntResult<E>, IntResult<E>> Peek(Consumer<E> fnErr, IntConsumer fnOk)
-	{ return res -> res.peek(fnErr, fnOk); }
+        @Override public LongResult map(final Function<AnyError, AnyError> fnErr, final LongUnaryOperator fnOk) {
+            return err(fnErr.apply(value));
+        }
 
-	public abstract <T> T reduce(Function<ERR, T> fnErr, LongFunction<T> fnOk);
-	public static <E, T> Function<IntResult<E>, T> Reduce(final Function<E, T> fnErr, final IntFunction<T> fnOk)
-	{ return res -> res.reduce(fnErr, fnOk); }
+        @Override public IntResult mapToInt(LongToIntFunction fn) { return IntResult.err(value); }
+        @Override public DoubleResult mapToDouble(LongToDoubleFunction fn) { return DoubleResult.err(value); }
+        @Override public <Z> Result<Z> mapToObj(LongFunction<Z> fn) { return Result.err(value); }
+        @Override public Result<Long> boxed() { return Result.err(value); }
 
-	public List<LongResult<ERR>> list() { return Collections.singletonList(this); }
+        @Override public LongResult mapErr(final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
 
-	public Stream<LongResult<ERR>> stream() { return Stream.of(this); }
+        @Override public boolean filterErr(final Predicate<AnyError> fn) { return fn.test(value); }
 
-	public final boolean isErr;
-	public final boolean isOk;
+        @Override public boolean isErrAnd(Predicate<AnyError> fn) { return fn.test(value); }
 
-	private static final class Sealed {}
-	private static final Sealed ADDITIONAL_SUBCLASSES_NOT_ALLOWED = new Sealed();
-	/** This class cannot be extended beyond the two subclasses defined in this file */
-	private LongResult(final Sealed _token, final boolean _isErr) {
-		if (_token != ADDITIONAL_SUBCLASSES_NOT_ALLOWED)
-			throw new IllegalArgumentException("Only the subclasses defined in the LongResult class may exist");
-		isErr = _isErr;
-		isOk = !_isErr;
-	}
+        @Override public LongResult ifErr(final Consumer<AnyError> fn) {
+            fn.accept(value);
+            return this;
+        }
+
+        @Override public LongResult recoverIf(final Predicate<AnyError> testFn, final ToLongFunction<AnyError> mapFn) {
+            if (testFn.test(value)) {
+                return ok(mapFn.applyAsLong(value));
+            }
+            return this;
+        }
+
+        @Override public LongResult flatMap(final LongFunction<LongResult> fn) { return this; }
+        @Override public LongResult flatRecover(final Function<AnyError, LongResult> fn) {
+            return fn.apply(value);
+        }
+
+        @Override public <Z> Z reduce(final Function<AnyError, Z> fnErr, final LongFunction<Z> fnOk) {
+            return fnErr.apply(value);
+        }
+        @Override public void consume(final Consumer<AnyError> fnErr, final LongConsumer fnOk) {
+            fnErr.accept(value);
+        }
+    }
+
+    /**
+     * An LongResult implementation that wraps an ok value, obtained by calling {@link LongResult#ok(long)}.
+     * To access {@link Ok#value}, You should obtain an Ok by doing an instanceof check
+     * <pre>{@code
+     * final LongResult res = ...;
+     * if (res instanceof Ok o) {
+     *     final long value = o.value();
+     * }
+     * }</pre>
+     * Note that this is safer than {@link LongResult#expectOk()} because that method throws an unchecked exception
+     * if the result type is not an Ok while this method guarantees the type is Ok.  In most cases though,
+     * you will use this pattern on the error case, typically returning res directly, and then calling
+     * {@link LongResult#expectOk()} because Java 17 does not have exhaustive if statements and therefore can't
+     * recognize the following doesn't need an else branch:
+     * <pre>{@code
+     * final long value;
+     * {
+     *     final LongResult res = ...;
+     *     if (res instanceof Err e) {
+     *          return e;
+     *     } else if (res instanceof Ok o) {
+     *         value = o.value();
+     *     }
+     *     // Compile error, value may be undefined.
+     * }
+     * }</pre>
+     * This has been resolved in later versions of java.  We will likely remove the {@link LongResult#expectOk()}
+     * methods when our minimum supported version can utilize the exhaustive test of the sealed type.
+     */
+    record Ok(long value) implements LongResult {
+
+        @Override public boolean isOk() { return true; }
+
+        @Override public long expectOk() { return value; }
+
+        @Override public OptionalLong opt() { return OptionalLong.of(value); }
+
+        @Override public LongResult map(final Function<AnyError, AnyError> fnErr, final LongUnaryOperator fnOk) {
+            return ok(fnOk.applyAsLong(value));
+        }
+
+        @Override public LongResult map(final LongUnaryOperator fn) { return ok(fn.applyAsLong(value)); }
+        @Override public IntResult mapToInt(LongToIntFunction fn) { return IntResult.ok(fn.applyAsInt(value)); }
+        @Override public DoubleResult mapToDouble(LongToDoubleFunction fn) { return DoubleResult.ok(fn.applyAsDouble(value)); }
+        @Override public <Z> Result<Z> mapToObj(LongFunction<Z> fn) { return Result.ok(fn.apply(value)); }
+        @Override public Result<Long> boxed() { return Result.ok(value); }
+
+        @Override public boolean filter(final LongPredicate fn) { return fn.test(value); }
+
+        @Override public boolean isOkAnd(LongPredicate fn) { return fn.test(value); }
+
+        @Override public LongResult ifOk(final LongConsumer fn) {
+            fn.accept(value);
+            return this;
+        }
+
+        @Override public LongResult failIf(final LongPredicate testFn, final LongFunction<AnyError> mapFn) {
+            if (testFn.test(value)) {
+                return err(mapFn.apply(value));
+            }
+            return this;
+        }
+
+        @Override public LongResult flatRecover(final Function<AnyError, LongResult> fn) {
+            return this;
+        }
+        @Override public LongResult flatMap(final LongFunction<LongResult> fn) { return fn.apply(value); }
+
+        @Override public <Z> Z reduce(final Function<AnyError, Z> fnErr, final LongFunction<Z> fnOk) {
+            return fnOk.apply(value);
+        }
+
+        @Override public void consume(final Consumer<AnyError> fnErr, final LongConsumer fnOk) {
+            fnOk.accept(value);
+        }
+    }
+
+    final class Errs {
+        public static Function<LongResult, LongResult> map(final Function<AnyError, AnyError> fn) {
+            return res -> res.mapErr(fn);
+        }
+
+        public static  Predicate<LongResult> filter(final Predicate<AnyError> fn) {
+            return res -> res.filterErr(fn);
+        }
+        public static  Predicate<LongResult> isErrAnd(final Predicate<AnyError> fn) {
+            return res -> res.isErrAnd(fn);
+        }
+
+        public static  Function<LongResult, LongResult> recoverIf(
+                final Predicate<AnyError> testFn, final ToLongFunction<AnyError> mapFn) {
+            return res -> res.recoverIf(testFn, mapFn);
+        }
+
+        public static <OK, Z> Function<LongResult, LongResult> flatRecover(
+                final Function<AnyError, LongResult> fn) {
+            return res -> res.flatRecover(fn);
+        }
+
+        public static  Consumer<LongResult> ifErr(final Consumer<AnyError> fn) {
+            return res -> res.ifErr(fn);
+        }
+
+        private Errs() {
+            throw new IllegalStateException("This is a static class and should never be instantiated");
+        }
+    }
+
+    final class Oks {
+        public static Function<LongResult, LongResult> map(final LongUnaryOperator fn) {
+            return res -> res.map(fn);
+        }
+
+        public static  Predicate<LongResult> filter(final LongPredicate fn) {
+            return res -> res.filter(fn);
+        }
+        public static  Predicate<LongResult> isOkAnd(final LongPredicate fn) {
+            return res -> res.isOkAnd(fn);
+        }
+
+        public static  Function<LongResult, LongResult> failIf(
+                final LongPredicate testFn, final LongFunction<AnyError> mapFn) {
+            return res -> res.failIf(testFn, mapFn);
+        }
+
+        public static Function<LongResult, LongResult> flatMap(final LongFunction<LongResult> fn) {
+            return res -> res.flatMap(fn);
+        }
+
+        public static  Consumer<LongResult> ifOk(final LongConsumer fn) {
+            return res -> res.ifOk(fn);
+        }
+
+        public static <OK> Function<LongResult, Result<OK>> mapToObj(LongFunction<OK> fn) {
+            return res -> res.mapToObj(fn);
+        }
+        public static Function<LongResult, IntResult> mapToInt(LongToIntFunction fn) {
+            return res -> res.mapToInt(fn);
+        }
+        public static Function<LongResult, DoubleResult> mapToLong(LongToDoubleFunction fn) {
+            return res -> res.mapToDouble(fn);
+        }
+
+        private Oks() {
+            throw new IllegalStateException("This is a static class and should never be instantiated");
+        }
+    }
 }
