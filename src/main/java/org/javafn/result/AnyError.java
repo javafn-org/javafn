@@ -79,7 +79,12 @@ public interface AnyError {
 	static <E extends Enum<E>, O> Result<O> fail(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return err(new EnumError<>(e, type));
+		return err(new EnumError<>(e, type, Optional.empty()));
+	}
+	static <E extends Enum<E>, O> Result<O> fail(final E e, final String msgDetails) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return err(new EnumError<>(e, type, Optional.ofNullable(msgDetails)));
 	}
 	/* *******************************************************************************/
 
@@ -102,7 +107,12 @@ public interface AnyError {
 	static <E extends Enum<E>> AnyError from(final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
-		return new EnumError<>(e, type);
+		return new EnumError<>(e, type, Optional.empty());
+	}
+	static <E extends Enum<E>> AnyError from(final E e, final String msgDetails) {
+		@SuppressWarnings("unchecked")
+		final Class<E> type = (Class<E>) e.getClass();
+		return new EnumError<>(e, type, Optional.ofNullable(msgDetails));
 	}
 	static AnyError joined(final List<AnyError> errors) {
 		return new ErrorList(errors);
@@ -150,8 +160,8 @@ public interface AnyError {
 		@Override public String toString() { return message(); }
 	}
 
-	record EnumError<E extends Enum<E>>(E error, Class<E> type) implements AnyError {
-		@Override public String message() { return error.name(); }
+	record EnumError<E extends Enum<E>>(E error, Class<E> type, Optional<String> msgDetails) implements AnyError {
+		@Override public String message() { return error.name() + msgDetails().map(s -> ": " + s).orElse(""); }
 		@Override public String toString() { return message(); }
 	}
 }
