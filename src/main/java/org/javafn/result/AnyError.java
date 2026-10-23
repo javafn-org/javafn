@@ -6,12 +6,9 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static org.javafn.result.Result.err;
-import static org.javafn.result.Result.ok;
 
 /**
  * A wrapper that can be used with the Result class to represent errors from multiple sources,
@@ -21,9 +18,30 @@ import static org.javafn.result.Result.ok;
  */
 public interface AnyError {
 
+	/**
+	 * Get the message associated with this error.
+	 */
 	String message();
+
+	/**
+	 * If this error wraps an ExceptionError, get the exception.  If it wraps anything else, construct a new
+	 * RuntimeException from the message and return it.  The stack trace of the new exception will be the
+	 * call site of this function, which may not be terribly useful.  This function is meant to be used
+	 * in conjunction with Try, where the error is guaranteed to be an ExceptionError, but there's no
+	 * way to capture this in the type system.
+	 */
+	default Exception except() {
+		return new RuntimeException(message());
+	}
+
+	/**
+	 * Construct a new ErrorList error type by joining that instance with this.
+	 */
 	default AnyError join(AnyError that) {
 		if (that == null) return this;
+		if (that instanceof ErrorList el) {
+			return new ErrorList(Data.append(List.<AnyError>of(this), el.errors()));
+		}
 		return new ErrorList(List.of(this, that));
 	}
 
