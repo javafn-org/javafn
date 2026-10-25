@@ -1,6 +1,7 @@
 package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,8 +38,13 @@ public interface LongResult {
         return new LongResult.Err(AnyError.from(errorMessages));
     }
     /** Create a new LongResult wrapping an exception. */
-    static <E extends Exception, OK> LongResult err(final E e) {
-        return new LongResult.Err(AnyError.from(e));
+    static <E extends Exception> @NonNull LongResult err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    static <E extends Exception> @NonNull LongResult err(@NonNull final E e, @Nullable final String errorMessage) {
+        return new Err(AnyError.from(e, errorMessage));
+    }
+    static <E extends Enum<E>> @NonNull LongResult err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    static <E extends Enum<E>> @NonNull LongResult err(@NonNull final E e, @Nullable final String errorMessage) {
+        return new Err(AnyError.from(e, errorMessage));
     }
 
     /**

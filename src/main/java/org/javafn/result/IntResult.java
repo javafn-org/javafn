@@ -1,6 +1,7 @@
 package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,8 +38,13 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
         return new Err(AnyError.from(errorMessages));
     }
     /** Create a new IntResult wrapping an exception. */
-    static <E extends Exception, OK> IntResult err(final E e) {
-        return new Err(AnyError.from(e));
+    static <E extends Exception> @NonNull IntResult err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    static <E extends Exception> @NonNull IntResult err(@NonNull final E e, @Nullable final String errorMessage) {
+        return new Err(AnyError.from(e, errorMessage));
+    }
+    static <E extends Enum<E>> @NonNull IntResult err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    static <E extends Enum<E>> @NonNull IntResult err(@NonNull final E e, @Nullable final String errorMessage) {
+        return new Err(AnyError.from(e, errorMessage));
     }
 
     /**

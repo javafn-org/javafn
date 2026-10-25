@@ -160,6 +160,7 @@ public interface AnyError {
 		public ExceptionError(@NonNull final Exception x) {
 			this((E) x, (Class<E>) x.getClass(), Optional.empty());
 		}
+		@Override public @NonNull Exception except() { return error; }
 		@Override public @NonNull String message() {
 			final StringWriter sw = new StringWriter();
 			final PrintWriter pw = new PrintWriter(sw);

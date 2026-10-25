@@ -1,6 +1,7 @@
 package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 
 import java.util.List;
 import java.util.Optional;
@@ -37,10 +38,14 @@ public interface DoubleResult {
         return new DoubleResult.Err(AnyError.from(errorMessages));
     }
     /** Create a new DoubleResult wrapping an exception. */
-    static <E extends Exception, OK> DoubleResult err(final E e) {
-        return new DoubleResult.Err(AnyError.from(e));
+    static <E extends Exception> @NonNull DoubleResult err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    static <E extends Exception> @NonNull DoubleResult err(@NonNull final E e, @Nullable final String errorMessage) {
+        return new Err(AnyError.from(e, errorMessage));
     }
-
+    static <E extends Enum<E>> @NonNull DoubleResult err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    static <E extends Enum<E>> @NonNull DoubleResult err(@NonNull final E e, @Nullable final String errorMessage) {
+        return new Err(AnyError.from(e, errorMessage));
+    }
     /**
      * Collect a stream of {@link DoubleResult}s into a {@link DoubleResultBatch}.
      * Since we don't have primitive lists, this function creates an array using an intermediate

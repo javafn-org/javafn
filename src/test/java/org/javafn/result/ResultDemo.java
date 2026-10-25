@@ -1,17 +1,10 @@
 package org.javafn.result;
 
-import org.javafn.result.Result.Err;
-
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Arrays;
-import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static org.javafn.result.Result.ok;
 
 public class ResultDemo {
     public static void main(String[] args) {
