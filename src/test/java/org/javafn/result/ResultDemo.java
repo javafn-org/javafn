@@ -6,41 +6,45 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.javafn.result.Result.ok;
 
 public class ResultDemo {
     public static void main(String[] args) {
-        final Result<Long> res1 = testIt1();
+
+        final LongResult res1 = testIt1();
         System.out.println(res1);
-        final Result<Long> res2 = testIt2();
+        final LongResult res2 = testIt2();
         System.out.println(res2);
         testIt3();
     }
 
-    public static Result<Long> testIt1() {
-        final Integer i;{
-            final var res1 = Result.ok(67);
-            if (res1 instanceof Err<?> e) {
-                return e.into();
+    public static LongResult testIt1() {
+        final int i;{
+            final IntResult res1 = IntResult.ok(67);
+            if (res1 instanceof IntResult.Err e) {
+                return e.intoLong();
             }
             i = res1.expectOk();
         }
 
-        return ok(i.longValue());
+        return LongResult.ok(i);
     }
 
-    public static Result<Long> testIt2() {
-        final Integer i;{
-            final Result<Integer> res1 = Result.err("This is an error");
-            if (res1 instanceof Err<?> e) {
-                return e.into();
+    public static LongResult testIt2() {
+        final int i;{
+            final IntResult res1 = IntResult.err("This is an error");
+            if (res1 instanceof IntResult.Err e) {
+                return e.intoLong();
             }
             i = res1.expectOk();
         }
 
-        return ok(i.longValue());
+        return LongResult.ok(i);
     }
 
     public static void testIt3() {

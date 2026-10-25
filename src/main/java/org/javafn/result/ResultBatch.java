@@ -1,5 +1,7 @@
 package org.javafn.result;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.javafn.utils.Data;
 
 import java.util.ArrayList;
@@ -29,18 +31,18 @@ import static org.javafn.result.AnyError.joined;
  * @param errors the {@link Result} error values
  * @param oks the {@link Result} ok values
  */
-public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
+public record ResultBatch<OK>(@NonNull List<AnyError> errors, @NonNull List<OK> oks) {
 
-    public ResultBatch {
-        errors = errors == null ? List.of() : List.copyOf(errors);
-        oks = oks == null ? List.of() : List.copyOf(oks);
+    public ResultBatch(@Nullable List<AnyError> errors, @Nullable List<OK> oks) {
+        this.errors = errors == null ? List.of() : List.copyOf(errors);
+        this.oks = oks == null ? List.of() : List.copyOf(oks);
     }
 
     /**
      * Construct an empty ResultBatch, useful for APIs that require a ResultBatch,
      * but calling/returning code does not have anything to report
      */
-    public static <O> ResultBatch<O> empty() { return new ResultBatch<>(List.of(), List.of()); }
+    public static <O> @NonNull ResultBatch<O> empty() { return new ResultBatch<>(List.of(), List.of()); }
 
     /**
      * Construct a ResultBatch from the supplied results.  This is useful for APIs that require
@@ -48,44 +50,16 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
      * item to report.
      */
     @SafeVarargs
-    public static <O> ResultBatch<O> of(final Result<O>... results) {
+    public static <O> @NonNull ResultBatch<O> of(@NonNull final Result<O>... results) {
         return Arrays.stream(results).collect(collector());
-    }
-    public static ResultBatch<Integer> of(final IntResult... results) {
-        return Arrays.stream(results).map(IntResult::boxed).collect(collector());
-    }
-    public static ResultBatch<Long> of(final LongResult... results) {
-        return Arrays.stream(results).map(LongResult::boxed).collect(collector());
-    }
-    public static ResultBatch<Double> of(final DoubleResult... results) {
-        return Arrays.stream(results).map(DoubleResult::boxed).collect(collector());
     }
 
     /**
      * Return a {@link Collector} over a stream of {@link Result} types producing a ResultBatch.
      * @see Result#batch()
      */
-    public static <O> Collector<Result<O>, ?, ResultBatch<O>> collector() {
-        return Collector.<Result<O>, Acc<O>, ResultBatch<O>>of(
-                Acc::new, Acc::add, Acc::merge, Acc::finish);
-    }
-    public static Collector<IntResult, ?, ResultBatch<Integer>> intCollector() {
-        return Collector.of(
-                Acc::new,
-                (Acc<Integer> acc, IntResult r) -> acc.add(r.boxed()),
-                Acc::merge, Acc::finish);
-    }
-    public static Collector<LongResult, ?, ResultBatch<Long>> longCollector() {
-        return Collector.of(
-                Acc::new,
-                (Acc<Long> acc, LongResult r) -> acc.add(r.boxed()),
-                Acc::merge, Acc::finish);
-    }
-    public static Collector<DoubleResult, ?, ResultBatch<Double>> doubleCollector() {
-        return Collector.of(
-                Acc::new,
-                (Acc<Double> acc, DoubleResult r) -> acc.add(r.boxed()),
-                Acc::merge, Acc::finish);
+    public static <O> @NonNull Collector<Result<O>, ?, ResultBatch<O>> collector() {
+        return Collector.<Result<O>, Acc<O>, ResultBatch<O>>of(Acc::new, Acc::add, Acc::merge, Acc::finish);
     }
 
     /** true if {@link #errors} has one or more elements */
@@ -106,7 +80,7 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
      * Apply the supplied mapping functions to their respective list elements and produce a new
      * ResultBatch containing the result of the mapping.
      */
-    public <O> ResultBatch<O> map(final Function<AnyError, AnyError> errFn, final Function<OK, O> okFn) {
+    public <O> @NonNull ResultBatch<O> map(@NonNull final Function<AnyError, AnyError> errFn, @NonNull final Function<OK, O> okFn) {
         return new ResultBatch<>(
                 errors.stream().map(errFn).toList(),
                 oks.stream().map(okFn).toList());
@@ -116,7 +90,7 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
      * Apply the supplied mapping function to the error elements and produce a new ResultBatch
      * containing the result of the mapping.
      */
-    public ResultBatch<OK> mapErrs(final Function<AnyError, AnyError> fn) {
+    public @NonNull ResultBatch<OK> mapErrs(@NonNull final Function<AnyError, AnyError> fn) {
         return new ResultBatch<>(errors.stream().map(fn).toList(), oks);
     }
 
@@ -124,7 +98,7 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
      * Apply the supplied mapping function to the ok elements and produce a new ResultBatch
      * containing the result of the mapping.
      */
-    public <Z> ResultBatch<Z> mapOks(final Function<OK, Z> fn) {
+    public <Z> @NonNull ResultBatch<Z> mapOks(@NonNull final Function<OK, Z> fn) {
         return new ResultBatch<>(errors, oks.stream().map(fn).toList());
     }
 
@@ -133,7 +107,7 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
      * {@link org.javafn.result.Result.Err} containing the list of errors, dropping the oks.
      * Otherwise, return a {@link org.javafn.result.Result.Ok} containing a list of oks.
      */
-    public Result<List<OK>> fold() {
+    public @NonNull Result<List<OK>> fold() {
         return errors.isEmpty()
                 ? Result.ok(oks)
                 : Result.err(joined(errors));
@@ -143,21 +117,22 @@ public record ResultBatch<OK>(List<AnyError> errors, List<OK> oks) {
      * Combine the errors and oks into a single type, for example, a JSON object that will
      * be returned to client code.
      */
-    public <Z> Z reduce(final BiFunction<List<AnyError>, List<OK>, Z> fn) {
+    public <Z> @NonNull Z reduce(@NonNull final BiFunction<List<AnyError>, List<OK>, Z> fn) {
         return fn.apply(errors, oks);
     }
 
     /**
      * Operate on the two sets of values without producing a new value.
      */
-    public void consume(final BiConsumer<List<AnyError>, List<OK>> fn) {
+    public void consume(@NonNull final BiConsumer<List<AnyError>, List<OK>> fn) {
         fn.accept(errors, oks);
     }
 
     /**
      * Return a new ResultBatch with all elements of this and all the elements of that appended.
      */
-    public ResultBatch<OK> append(final ResultBatch<OK> that) {
+    public @NonNull ResultBatch<OK> append(@Nullable final ResultBatch<OK> that) {
+        if (that == null) return this;
         return new ResultBatch<>(
                 Data.append(errors, that.errors),
                 Data.append(oks, that.oks));

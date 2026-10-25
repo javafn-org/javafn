@@ -1,12 +1,11 @@
 package org.javafn.result;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
-import java.util.function.DoubleFunction;
-import java.util.function.DoubleToIntFunction;
-import java.util.function.DoubleToLongFunction;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongFunction;
@@ -17,6 +16,7 @@ import java.util.function.LongUnaryOperator;
 import java.util.function.Predicate;
 import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
+import java.util.stream.LongStream;
 
 public interface LongResult {
     /** Create a new Result wrapping a successful integer value. */
@@ -42,12 +42,13 @@ public interface LongResult {
     }
 
     /**
-     * Collect a stream of {@link LongResult}s into a {@link ResultBatch}.
-     * Since we don't have primitive lists, this function boxes the ok results.
-     * @return a collector that generates a ResultBatch
+     * Collect a stream of {@link LongResult}s into a {@link LongResultBatch}.
+     * Since we don't have primitive lists, this function creates an array using an intermediate
+     * {@link LongStream#builder}.
+     * @return a collector that generates a LongResultBatch
      */
-    static Collector<LongResult, ?, ResultBatch<Long>> batch() {
-        return ResultBatch.longCollector();
+    static Collector<LongResult, ?, LongResultBatch> batch() {
+        return LongResultBatch.collector();
     }
 
     /**
@@ -302,6 +303,11 @@ public interface LongResult {
     record Err(AnyError value) implements LongResult {
 
         @Override public boolean isErr() { return true; }
+
+        public <Z> @NonNull Result<Z> into() { return Result.err(value); }
+
+        public @NonNull IntResult intoInt() { return IntResult.err(value); }
+        public @NonNull DoubleResult intoDouble() { return DoubleResult.err(value); }
 
         @Override public AnyError expectErr() { return value; }
 

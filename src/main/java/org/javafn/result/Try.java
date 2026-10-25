@@ -1,7 +1,15 @@
 package org.javafn.result;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
+import org.javafn.utils.Expect;
+
+import javax.annotation.Nonnull;
 import java.util.function.Consumer;
+import java.util.function.DoubleFunction;
 import java.util.function.Function;
+import java.util.function.IntFunction;
+import java.util.function.LongFunction;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
@@ -15,17 +23,35 @@ public class Try {
      * @param <O> The type of data that is returned when an exception is not thrown
      */
     @FunctionalInterface public interface ThrowingSupplier<O> {
-        O get() throws Exception;
+        @Nullable O get() throws Exception;
     }
-//    @FunctionalInterface public interface IntThrowingSupplier {
-//        int get() throws Exception;
-//    }
-//    @FunctionalInterface public interface LongThrowingSupplier {
-//        long get() throws Exception;
-//    }
-//    @FunctionalInterface public interface DoubleThrowingSupplier {
-//        double get() throws Exception;
-//    }
+    @FunctionalInterface public interface IntThrowingSupplier {
+        int get() throws Exception;
+    }
+    @FunctionalInterface public interface LongThrowingSupplier {
+        long get() throws Exception;
+    }
+    @FunctionalInterface public interface DoubleThrowingSupplier {
+        double get() throws Exception;
+    }
+    @FunctionalInterface public interface ToIntThrowingFunction<V> {
+        int applyAsInt(@NonNull V v) throws Exception;
+    }
+    @FunctionalInterface public interface ToLongThrowingFunction<V> {
+        long applyAsLong(@NonNull V v) throws Exception;
+    }
+    @FunctionalInterface public interface ToDoubleThrowingFunction<V> {
+        double applyAsDouble(@NonNull V v) throws Exception;
+    }
+    @FunctionalInterface public interface FromIntThrowingFunction<V> {
+        @Nullable V apply(int i) throws Exception;
+    }
+    @FunctionalInterface public interface FromLongThrowingFunction<V> {
+        @Nullable V apply(long l) throws Exception;
+    }
+    @FunctionalInterface public interface FromDoubleThrowingFunction<V> {
+        @Nullable V apply(double d) throws Exception;
+    }
 
     /**
      * An interface similar to {@link Runnable} that declares that it throws an Exception.
@@ -45,7 +71,7 @@ public class Try {
      * @param <O> The type of data that is accepted and may cause an exception to be thrown
      */
     @FunctionalInterface public interface ThrowingConsumer<O> {
-        void accept(O o) throws Exception;
+        void accept(@Nullable O o) throws Exception;
     }
 
     /**
@@ -57,7 +83,7 @@ public class Try {
      * @param <U> The type of data that is returned by the function
      */
     @FunctionalInterface public interface ThrowingFunction<T, U> {
-        U map(T t) throws Exception;
+        U map(@Nullable T t) throws Exception;
     }
 
     /**
@@ -65,21 +91,22 @@ public class Try {
      * return the value that was obtained as an Ok.
      * <pre>{@code
      * final String num = "3.14159z";
-     * final Result<Exception, Integer> res = Try.get(() -> Integer.parseInt(num, 10));
-     * res.asErr().opt().ifPresent(ex -> System.out.println(ex.getClass())); // prints NumberFormatException.class
+     * final Result<Integer> res = Try.toGet(() -> Integer.parseInt(num, 10));
+     * res.optErr().ifPresent(ex -> System.out.println(ex.except().getClass())); // prints NumberFormatException.class
      * }</pre>
      * Of course, the real value is using this within streams where you can't throw exceptions.
      * <pre>{@code
      * final String[] nums = ...;
      * final int errCount = Arrays.stream(nums)
-     *     .map(num -> Try.get() -> Integer.parseInt(num, 10)))
+     *     .map(num -> Try.toGet(() -> Integer.parseInt(num, 10)))
      *     .filter(Result::isErr)
      *     .count();
      * System.out.println("There are " + errCount + " bad numbers in the supplied array.");
      * }</pre>
+     * @see #toMap(ThrowingFunction)
      * @param fn the supplier that produces an O and can throw an exception
      */
-    public static <O> Result<O> toGet(final ThrowingSupplier<O> fn) {
+    public static <O> @Nonnull Result<O> toGet(@Nonnull final ThrowingSupplier<O> fn) {
         final O o;
         try {
             o = fn.get();
@@ -89,34 +116,34 @@ public class Try {
         return Result.ok(o);
     }
 
-//    public static IntResult<Exception> getInt(final IntThrowingSupplier fn) {
-//        final int i;
-//        try {
-//            i = fn.get();
-//        } catch (final Exception e) {
-//            return IntResult.err(e);
-//        }
-//        return IntResult.ok(i);
-//    }
-//    public static LongResult<Exception> getLong(final LongThrowingSupplier fn) {
-//        final long l;
-//        try {
-//            l = fn.get();
-//        } catch (final Exception e) {
-//            return LongResult.err(e);
-//        }
-//        return LongResult.ok(l);
-//    }
-//    public static DoubleResult<Exception> getDouble(final DoubleThrowingSupplier fn) {
-//        final double d;
-//        try {
-//            d = fn.get();
-//        } catch (final Exception e) {
-//            return DoubleResult.err(e);
-//        }
-//        return DoubleResult.ok(d);
-//    }
-//
+    public static @Nonnull IntResult toGetInt(@Nonnull final IntThrowingSupplier fn) {
+        final int i;
+        try {
+            i = fn.get();
+        } catch (final Exception e) {
+            return IntResult.err(e);
+        }
+        return IntResult.ok(i);
+    }
+    public static @Nonnull LongResult toGetLong(@Nonnull final LongThrowingSupplier fn) {
+        final long l;
+        try {
+            l = fn.get();
+        } catch (final Exception e) {
+            return LongResult.err(e);
+        }
+        return LongResult.ok(l);
+    }
+    public static @Nonnull DoubleResult toGetDouble(@Nonnull final DoubleThrowingSupplier fn) {
+        final double d;
+        try {
+            d = fn.get();
+        } catch (final Exception e) {
+            return DoubleResult.err(e);
+        }
+        return DoubleResult.ok(d);
+    }
+
     /**
      * Try to call the supplied runnable.  If an exception is thrown, return an Err, otherwise,
      * return a Void Ok.
@@ -128,14 +155,14 @@ public class Try {
      * <pre>{@code
      * final FileOutputStreams[] openFiles = ...;
      * final int errCount = Arrays.stream(openFiles)
-     *     .map(file -> Try.run(() -> file.close()))
+     *     .map(file -> Try.to(() -> file.close()))
      *     .filter(Result::isErr)
      *     .count();
      * System.out.println(errCount + " files failed to close.");
      * }</pre>
      * @param fn the Runnable that can throw an exception
      */
-    public static Result<Void> to(final ThrowingRunnable fn) {
+    public static @Nonnull Result<Void> to(@Nonnull final ThrowingRunnable fn) {
         try {
             fn.run();
         } catch (final Exception e) {
@@ -151,7 +178,7 @@ public class Try {
      * <pre>{@code
      * final FileOutputStreams[] openFiles = ...;
      * final int errCount = Arrays.stream(openFiles)
-     *     .map(Try.toAccept(file -> file.close()))
+     *     .map(Try.toUse(file -> file.close()))
      *     .filter(Result::isErr)
      *     .count();
      * System.out.println(errCount + " files failed to close.");
@@ -162,13 +189,13 @@ public class Try {
      * this function generates the lambda.
      * Notice the similarity between
      * <pre>{@code
-     *     .map(Try.toAccept(foo -> foo.bar()))
-     *     .map(foo -> Try.run(() -> foo.bar()))
+     *     .map(Try.toUse(foo -> foo.bar()))
+     *     .map(foo -> Try.to(() -> foo.bar()))
      * }</pre>
      * This function is essentially syntactic sugar for {@link #to(ThrowingRunnable)}.
      * @param fn the consumer that can throw an exception
      */
-    public static <T> Function<T, Result<Void>> toUse(final ThrowingConsumer<T> fn) {
+    public static <T> @Nonnull Function<T, Result<Void>> toUse(@Nonnull final ThrowingConsumer<T> fn) {
         return t -> {
             try {
                 fn.accept(t);
@@ -204,7 +231,7 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #toGet(ThrowingSupplier)}.
      * @param fn the mapping function that can throw an exception
      */
-    public static <T, U> Function<T, Result<U>> toMap(final ThrowingFunction<T, U> fn) {
+    public static <T, U> @Nonnull Function<T, Result<U>> toMap(@Nonnull final ThrowingFunction<T, U> fn) {
         return t -> {
             final U u;
             try {
@@ -216,5 +243,72 @@ public class Try {
         };
     }
 
-    private Try() { throw new IllegalStateException("This is a static class that should never be instantiated."); }
+    public static <T> @Nonnull Function<T, IntResult> toMapToInt(@Nonnull final ToIntThrowingFunction<T> fn) {
+        return t -> {
+            final int u;
+            try {
+                u = fn.applyAsInt(t);
+            } catch (final Exception e) {
+                return IntResult.err(e);
+            }
+            return IntResult.ok(u);
+        };
+    }
+    public static <T> @Nonnull Function<T, LongResult> toMapToLong(@Nonnull final ToLongThrowingFunction<T> fn) {
+        return t -> {
+            final long u;
+            try {
+                u = fn.applyAsLong(t);
+            } catch (final Exception e) {
+                return LongResult.err(e);
+            }
+            return LongResult.ok(u);
+        };
+    }
+    public static <T> @Nonnull Function<T, DoubleResult> toMapToDouble(@Nonnull final ToDoubleThrowingFunction<T> fn) {
+        return t -> {
+            final double u;
+            try {
+                u = fn.applyAsDouble(t);
+            } catch (final Exception e) {
+                return DoubleResult.err(e);
+            }
+            return DoubleResult.ok(u);
+        };
+    }
+    public static <T> @Nonnull IntFunction<Result<T>> toMapFromInt(@Nonnull final FromIntThrowingFunction<T> fn) {
+        return t -> {
+            final T u;
+            try {
+                u = fn.apply(t);
+            } catch (final Exception e) {
+                return Result.err(e);
+            }
+            return Result.ok(u);
+        };
+    }
+    public static <T> @Nonnull LongFunction<Result<T>> toMapFromLong(@Nonnull final FromLongThrowingFunction<T> fn) {
+        return t -> {
+            final T u;
+            try {
+                u = fn.apply(t);
+            } catch (final Exception e) {
+                return Result.err(e);
+            }
+            return Result.ok(u);
+        };
+    }
+    public static <T> @Nonnull DoubleFunction<Result<T>> toMapFromDouble(@Nonnull final FromDoubleThrowingFunction<T> fn) {
+        return t -> {
+            final T u;
+            try {
+                u = fn.apply(t);
+            } catch (final Exception e) {
+                return Result.err(e);
+            }
+            return Result.ok(u);
+        };
+    }
+
+    private Try() {Expect.staticConstructorNotCalled(Try.class);}
 }

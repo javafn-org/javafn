@@ -1,23 +1,22 @@
 package org.javafn.result;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.function.Consumer;
-import java.util.function.DoubleToLongFunction;
-import java.util.function.Function;
 import java.util.function.DoubleConsumer;
 import java.util.function.DoubleFunction;
 import java.util.function.DoublePredicate;
 import java.util.function.DoubleToIntFunction;
+import java.util.function.DoubleToLongFunction;
 import java.util.function.DoubleUnaryOperator;
-import java.util.function.IntFunction;
-import java.util.function.IntToDoubleFunction;
-import java.util.function.IntToLongFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
+import java.util.stream.DoubleStream;
 
 public interface DoubleResult {
     /** Create a new Result wrapping a successful integer value. */
@@ -43,12 +42,13 @@ public interface DoubleResult {
     }
 
     /**
-     * Collect a stream of {@link DoubleResult}s into a {@link ResultBatch}.
-     * Since we don't have primitive lists, this function boxes the ok results.
+     * Collect a stream of {@link DoubleResult}s into a {@link DoubleResultBatch}.
+     * Since we don't have primitive lists, this function creates an array using an intermediate
+     * {@link DoubleStream#builder}.
      * @return a collector that generates a ResultBatch
      */
-    static Collector<DoubleResult, ?, ResultBatch<Double>> batch() {
-        return ResultBatch.doubleCollector();
+    static Collector<DoubleResult, ?, DoubleResultBatch> batch() {
+        return DoubleResultBatch.collector();
     }
 
     /**
@@ -303,6 +303,11 @@ public interface DoubleResult {
     record Err(AnyError value) implements DoubleResult {
 
         @Override public boolean isErr() { return true; }
+
+        public <Z> @NonNull Result<Z> into() { return Result.err(value); }
+
+        public @NonNull IntResult intoInt() { return IntResult.err(value); }
+        public @NonNull LongResult intoLong() { return LongResult.err(value); }
 
         @Override public AnyError expectErr() { return value; }
 

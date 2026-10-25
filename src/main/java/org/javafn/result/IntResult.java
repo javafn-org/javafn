@@ -1,5 +1,7 @@
 package org.javafn.result;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
@@ -12,10 +14,9 @@ import java.util.function.IntToDoubleFunction;
 import java.util.function.IntToLongFunction;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
-import java.util.function.ToDoubleFunction;
 import java.util.function.ToIntFunction;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
+import java.util.stream.IntStream;
 
 public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
      /** Create a new Result wrapping a successful integer value. */
@@ -41,12 +42,13 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
     }
 
     /**
-     * Collect a stream of {@link IntResult}s into a {@link ResultBatch}.
-     * Since we don't have primitive lists, this function boxes the ok results.
+     * Collect a stream of {@link IntResult}s into a {@link IntResultBatch}.
+     * Since we don't have primitive lists, this function creates an array using an intermediate
+     * {@link IntStream#builder}.
      * @return a collector that generates a ResultBatch
      */
-    static Collector<IntResult, ?, ResultBatch<Integer>> batch() {
-        return ResultBatch.intCollector();
+    static Collector<IntResult, ?, IntResultBatch> batch() {
+        return IntResultBatch.collector();
     }
 
     /**
@@ -302,6 +304,11 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
     record Err(AnyError value) implements IntResult {
 
         @Override public boolean isErr() { return true; }
+
+        public <Z> @NonNull Result<Z> into() { return Result.err(value); }
+
+        public @NonNull LongResult intoLong() { return LongResult.err(value); }
+        public @NonNull DoubleResult intoDouble() { return DoubleResult.err(value); }
 
         @Override public AnyError expectErr() { return value; }
 

@@ -1,5 +1,7 @@
 package org.javafn.result;
 
+import edu.umd.cs.findbugs.annotations.NonNull;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
@@ -22,7 +24,7 @@ public interface AnyError {
 	/**
 	 * Get the message associated with this error.
 	 */
-	String message();
+	@NonNull String message();
 
 	/**
 	 * If this error wraps an ExceptionError, get the exception.  If it wraps anything else, construct a new
@@ -31,14 +33,14 @@ public interface AnyError {
 	 * in conjunction with Try, where the error is guaranteed to be an ExceptionError, but there's no
 	 * way to capture this in the type system.
 	 */
-	default Exception except() {
+	default @NonNull Exception except() {
 		return new RuntimeException(message());
 	}
 
 	/**
 	 * Construct a new ErrorList error type by joining that instance with this.
 	 */
-	default AnyError join(AnyError that) {
+	default @NonNull AnyError join(@Nullable final AnyError that) {
 		if (that == null) return this;
 		if (that instanceof ErrorList el) {
 			return new ErrorList(Data.append(List.<AnyError>of(this), el.errors()));
@@ -47,16 +49,16 @@ public interface AnyError {
 	}
 
 	/** Turn this AnyError into an Err Result */
-	default <T> Result<T> fail() {
+	default <T> @NonNull Result<T> fail() {
 		return Result.err(this);
 	}
 
 	/* *******************************************************************************/
 
-	static Result<Void> fold(final Result<?>... results) {
+	static @NonNull Result<Void> fold(@NonNull final Result<?>... results) {
 		return fold(Arrays.asList(results));
 	}
-	static Result<Void> fold(final List<Result<?>> results) {
+	static @NonNull Result<Void> fold(@NonNull final List<Result<?>> results) {
 		return results.stream()
 				.filter(Result::isErr)
 				.map(Result::expectErr)
@@ -65,77 +67,77 @@ public interface AnyError {
 				.orElseGet(Result::ok);
 	}
 
-	static <O> Result<O> fail(final String errorMessage) {
+	static <O> @NonNull Result<O> fail(@NonNull final String errorMessage) {
 		return err(new StringError(errorMessage));
 	}
-	static <O> Result<O> fail(final List<String> errorMessages) {
+	static <O> @NonNull Result<O> fail(@NonNull final List<String> errorMessages) {
 		return err(new ErrorList(errorMessages.stream().map(AnyError::from).toList()));
 	}
-	static <E extends Exception, O> Result<O> fail(final E e) {
+	static <E extends Exception, O> @NonNull Result<O> fail(@NonNull final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new ExceptionError<>(e, type, Optional.empty()));
 	}
-	static <E extends Exception, O> Result<O> fail(final E e, final String msgPrefix) {
+	static <E extends Exception, O> @NonNull Result<O> fail(@NonNull final E e, @Nullable final String msgPrefix) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new ExceptionError<>(e, type, Optional.ofNullable(msgPrefix)));
 	}
-	static <E extends Enum<E>, O> Result<O> fail(final E e) {
+	static <E extends Enum<E>, O> @NonNull Result<O> fail(@NonNull final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new EnumError<>(e, type, Optional.empty()));
 	}
-	static <E extends Enum<E>, O> Result<O> fail(final E e, final String msgDetails) {
+	static <E extends Enum<E>, O> @NonNull Result<O> fail(@NonNull final E e, @Nullable final String msgDetails) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new EnumError<>(e, type, Optional.ofNullable(msgDetails)));
 	}
 	/* *******************************************************************************/
 
-	static AnyError from(final String errorMessage) {
+	static @NonNull AnyError from(@NonNull final String errorMessage) {
 		return new StringError(errorMessage);
 	}
-	static AnyError from(final List<String> errorMessages) {
+	static @NonNull AnyError from(@NonNull final List<String> errorMessages) {
 		return new ErrorList(errorMessages.stream().map(AnyError::from).toList());
 	}
-	static <E extends Exception> AnyError from(final E e) {
+	static <E extends Exception> @NonNull AnyError from(@NonNull final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return new ExceptionError<>(e, type, Optional.empty());
 	}
-	static <E extends Exception> AnyError from(final E e, final String msgPrefix) {
+	static <E extends Exception> @NonNull AnyError from(@NonNull final E e, @Nullable final String msgPrefix) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return new ExceptionError<>(e, type, Optional.ofNullable(msgPrefix));
 	}
-	static <E extends Enum<E>> AnyError from(final E e) {
+	static <E extends Enum<E>> @NonNull AnyError from(@NonNull final E e) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return new EnumError<>(e, type, Optional.empty());
 	}
-	static <E extends Enum<E>> AnyError from(final E e, final String msgDetails) {
+	static <E extends Enum<E>> @NonNull AnyError from(@NonNull final E e, @Nullable final String msgDetails) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
 		return new EnumError<>(e, type, Optional.ofNullable(msgDetails));
 	}
-	static AnyError joined(final List<AnyError> errors) {
+	static @NonNull AnyError joined(@NonNull final List<AnyError> errors) {
 		return new ErrorList(errors);
 	}
 
 	/* *******************************************************************************/
 
-	record ErrorList(List<AnyError> errors) implements AnyError {
+	record ErrorList(@NonNull List<AnyError> errors) implements AnyError {
 		public ErrorList() {
 			this(List.of());
 		}
-		@Override public String message() {
+		@Override public @NonNull String message() {
 			return errors.stream()
 					.map(AnyError::message)
 					.collect(Collectors.joining("\n"));
 		}
 		@Override
-		public ErrorList join(final AnyError that) {
+		public @NonNull ErrorList join(@Nullable final AnyError that) {
 			if (that == null) return this;
 			if (that instanceof ErrorList thatList) {
 				return new ErrorList(Data.append(errors, thatList.errors));
@@ -145,16 +147,20 @@ public interface AnyError {
 		}
 	}
 
-	record StringError(String message) implements AnyError {
-		@Override public String toString() { return message; }
+	record StringError(@NonNull String message) implements AnyError {
+		@Override public @NonNull String toString() { return message; }
 	}
 
-	record ExceptionError<E extends Exception>(E error, Class<E> type, Optional<String> msgPrefix) implements AnyError {
+	record ExceptionError<E extends Exception>(
+			@NonNull E error,
+			@NonNull Class<E> type,
+			@NonNull Optional<String> msgPrefix
+	) implements AnyError {
 		@SuppressWarnings("unchecked")
-		public ExceptionError(final Exception x) {
+		public ExceptionError(@NonNull final Exception x) {
 			this((E) x, (Class<E>) x.getClass(), Optional.empty());
 		}
-		@Override public String message() {
+		@Override public @NonNull String message() {
 			final StringWriter sw = new StringWriter();
 			final PrintWriter pw = new PrintWriter(sw);
 			msgPrefix.ifPresent(pw::println);
@@ -162,11 +168,15 @@ public interface AnyError {
 			pw.flush();
 			return sw.toString();
 		}
-		@Override public String toString() { return message(); }
+		@Override public @NonNull String toString() { return message(); }
 	}
 
-	record EnumError<E extends Enum<E>>(E error, Class<E> type, Optional<String> msgDetails) implements AnyError {
-		@Override public String message() { return error.name() + msgDetails().map(s -> ": " + s).orElse(""); }
-		@Override public String toString() { return message(); }
+	record EnumError<E extends Enum<E>>(
+			@NonNull E error,
+			@NonNull Class<E> type,
+			@NonNull Optional<String> msgDetails
+	) implements AnyError {
+		@Override public @NonNull String message() { return error.name() + msgDetails().map(s -> ": " + s).orElse(""); }
+		@Override public @NonNull String toString() { return message(); }
 	}
 }
