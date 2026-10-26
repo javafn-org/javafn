@@ -71,7 +71,7 @@ public class Try {
      * @param <O> The type of data that is accepted and may cause an exception to be thrown
      */
     @FunctionalInterface public interface ThrowingConsumer<O> {
-        void accept(@Nullable O o) throws Exception;
+        void accept(O o) throws Exception;
     }
 
     /**
@@ -83,7 +83,7 @@ public class Try {
      * @param <U> The type of data that is returned by the function
      */
     @FunctionalInterface public interface ThrowingFunction<T, U> {
-        U map(@Nullable T t) throws Exception;
+        U map(T t) throws Exception;
     }
 
     /**
@@ -162,13 +162,13 @@ public class Try {
      * }</pre>
      * @param fn the Runnable that can throw an exception
      */
-    public static @Nonnull Result<Void> to(@Nonnull final ThrowingRunnable fn) {
+    public static @Nonnull VoidResult to(@Nonnull final ThrowingRunnable fn) {
         try {
             fn.run();
         } catch (final Exception e) {
-            return AnyError.fail(e);
+            return VoidResult.err(e);
         }
-        return Result.ok();
+        return VoidResult.ok();
     }
 
     /**
@@ -195,14 +195,14 @@ public class Try {
      * This function is essentially syntactic sugar for {@link #to(ThrowingRunnable)}.
      * @param fn the consumer that can throw an exception
      */
-    public static <T> @Nonnull Function<T, Result<Void>> toUse(@Nonnull final ThrowingConsumer<T> fn) {
+    public static <T> @Nonnull Function<T, VoidResult> toUse(@Nonnull final ThrowingConsumer<T> fn) {
         return t -> {
             try {
                 fn.accept(t);
             } catch (final Exception e) {
-                return AnyError.fail(e);
+                return VoidResult.err(e);
             }
-            return Result.ok();
+            return VoidResult.ok();
         };
     }
 

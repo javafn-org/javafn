@@ -21,31 +21,56 @@ import java.util.stream.LongStream;
 
 public interface LongResult {
     /** Create a new Result wrapping a successful integer value. */
-    static LongResult ok(final long ok) {
+    static Ok ok(final long ok) {
         return new LongResult.Ok(ok);
+    }
+    /**
+     * Create a new IntResult wrapping a successful value, dropping type information
+     * so that the return value is an IntResult, not an Ok.
+     * see {@link #res()}
+     */
+    static @NonNull LongResult okRes(final long ok) {
+        return ok(ok);
     }
 
     /** Create a new LongResult wrapping an error value. */
-    static LongResult err(final AnyError err) {
+    static Err err(final AnyError err) {
         return new LongResult.Err(err);
     }
     /** Create a new LongResult wrapping an error message. */
-    static LongResult err(final String errorMessage) {
+    static Err err(final String errorMessage) {
         return new LongResult.Err(AnyError.from(errorMessage));
     }
     /** Create a new LongResult wrapping a list of error messages. */
-    static LongResult err(final List<String> errorMessages) {
+    static Err err(final List<String> errorMessages) {
         return new LongResult.Err(AnyError.from(errorMessages));
     }
     /** Create a new LongResult wrapping an exception. */
-    static <E extends Exception> @NonNull LongResult err(@NonNull final E e) {return new Err(AnyError.from(e));}
-    static <E extends Exception> @NonNull LongResult err(@NonNull final E e, @Nullable final String errorMessage) {
+    static <E extends Exception> @NonNull Err err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    static <E extends Exception> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
-    static <E extends Enum<E>> @NonNull LongResult err(@NonNull final E e) { return new Err(AnyError.from(e)); }
-    static <E extends Enum<E>> @NonNull LongResult err(@NonNull final E e, @Nullable final String errorMessage) {
+    static <E extends Enum<E>> @NonNull Err err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    static <E extends Enum<E>> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
+
+    /**
+     * Drop any variant type information and treat this as a LongResult.
+     * <pre>{@code
+     *  Optional.of(foo)
+     *      .map(f -> LongResult.ok(67)) // Ok
+     *      // Does not compile because Err is not an Ok
+     *      .orElseGet(() -> err("Not a foo"));
+     * }</pre>
+     * <pre>{@code
+     *  Optional.of(foo)
+     *      .map(f -> LongResult.ok(67).as())      // LongResult
+     *      .orElseGet(() -> err("Not a foo"));    // LongResult
+     * }</pre>
+     * @return this as a LongResult rather than an Ok or Err
+     */
+    default LongResult res() { return this; }
 
     /**
      * Collect a stream of {@link LongResult}s into a {@link LongResultBatch}.
@@ -310,10 +335,16 @@ public interface LongResult {
 
         @Override public boolean isErr() { return true; }
 
-        public <Z> @NonNull Result<Z> into() { return Result.err(value); }
+        public @NonNull String message() { return value.message(); }
+        public @NonNull Exception except() { return value.except(); }
+        public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
+        public @NonNull AnyError join(final @NonNull AnyError that) { return value.join(that); }
 
-        public @NonNull IntResult intoInt() { return IntResult.err(value); }
-        public @NonNull DoubleResult intoDouble() { return DoubleResult.err(value); }
+        public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
+
+        public @NonNull IntResult.Err intoInt() { return IntResult.err(value); }
+        public @NonNull DoubleResult.Err intoDouble() { return DoubleResult.err(value); }
+        public @NonNull VoidResult.Err intoVoid() { return VoidResult.err(value); }
 
         @Override public AnyError expectErr() { return value; }
 

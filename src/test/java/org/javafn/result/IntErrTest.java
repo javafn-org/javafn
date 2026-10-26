@@ -112,7 +112,7 @@ class IntErrTest {
     @Test
     @DisplayName("IntErr.into coerces OK type")
     void testInto() {
-        var res = IntResult.err("fail");
+        var res = IntResult.err("fail").res();
         if (res instanceof IntResult.Err asErr) {
             Result<String> coerced = asErr.into();
             assertTrue(coerced.isErr());

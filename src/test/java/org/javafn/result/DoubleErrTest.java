@@ -112,7 +112,7 @@ class DoubleErrTest {
     @Test
     @DisplayName("DoubleErr.into coerces OK type")
     void testInto() {
-        var res = DoubleResult.err("fail");
+        var res = DoubleResult.err("fail").res();
         if (res instanceof DoubleResult.Err asErr) {
             Result<String> coerced = asErr.into();
             assertTrue(coerced.isErr());

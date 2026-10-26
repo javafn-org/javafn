@@ -19,10 +19,9 @@ class ResultTest {
     @Test
     @DisplayName("Result.ok() factory creates an Ok instance with null value (Void)")
     void testOkVoidFactory() {
-        var res = Result.ok();
+        var res = VoidResult.ok();
         assertTrue(res.isOk());
         assertFalse(res.isErr());
-        assertNull(res.expectOk());
     }
 
     @Test
@@ -79,7 +78,7 @@ class ResultTest {
     void testAsFailure() {
         var res = Result.<String>err("fail");
         var okInstance = new Result.Ok<>("some ok");
-        assertThrows(IllegalArgumentException.class, () -> res.as(okInstance));
+        assertThrows(IllegalArgumentException.class, () -> res.res(okInstance));
     }
 
     @Test
@@ -87,6 +86,6 @@ class ResultTest {
     void testAsWrongInstance() {
         var res = Result.ok("success");
         var okInstance = new Result.Ok<>("different ok");
-        assertThrows(IllegalArgumentException.class, () -> res.as(okInstance));
+        assertThrows(IllegalArgumentException.class, () -> res.res(okInstance));
     }
 }

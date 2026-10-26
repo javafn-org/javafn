@@ -118,7 +118,7 @@ class ErrTest {
     @Test
     @DisplayName("Err.into coerces OK type")
     void testInto() {
-        var res = Result.<String>err("fail");
+        var res = Result.<String>err("fail").res();
         if (res instanceof Result.Err<String> asErr) {
             Result<Number> coerced = asErr.into();
             assertTrue(coerced.isErr());

@@ -21,31 +21,56 @@ import java.util.stream.IntStream;
 
 public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
      /** Create a new Result wrapping a successful integer value. */
-    static IntResult ok(final int ok) {
+    static Ok ok(final int ok) {
         return new Ok(ok);
+    }
+    /**
+     * Create a new IntResult wrapping a successful value, dropping type information
+     * so that the return value is an IntResult, not an Ok.
+     * see {@link #res()}
+     */
+    static @NonNull IntResult okRes(final int ok) {
+        return ok(ok);
     }
 
     /** Create a new IntResult wrapping an error value. */
-    static IntResult err(final AnyError err) {
+    static Err err(final AnyError err) {
         return new Err(err);
     }
     /** Create a new IntResult wrapping an error message. */
-    static IntResult err(final String errorMessage) {
+    static Err err(final String errorMessage) {
         return new Err(AnyError.from(errorMessage));
     }
     /** Create a new IntResult wrapping a list of error messages. */
-    static IntResult err(final List<String> errorMessages) {
+    static Err err(final List<String> errorMessages) {
         return new Err(AnyError.from(errorMessages));
     }
     /** Create a new IntResult wrapping an exception. */
-    static <E extends Exception> @NonNull IntResult err(@NonNull final E e) {return new Err(AnyError.from(e));}
-    static <E extends Exception> @NonNull IntResult err(@NonNull final E e, @Nullable final String errorMessage) {
+    static <E extends Exception> @NonNull Err err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    static <E extends Exception> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
-    static <E extends Enum<E>> @NonNull IntResult err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    static <E extends Enum<E>> @NonNull Err err(@NonNull final E e) { return new Err(AnyError.from(e)); }
     static <E extends Enum<E>> @NonNull IntResult err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
+
+    /**
+     * Drop any variant type information and treat this as a IntResult.
+     * <pre>{@code
+     *  Optional.of(foo)
+     *      .map(f -> IntResult.ok(67)) // Ok
+     *      // Does not compile because Err is not an Ok
+     *      .orElseGet(() -> err("Not a foo"));
+     * }</pre>
+     * <pre>{@code
+     *  Optional.of(foo)
+     *      .map(f -> IntResult.ok(67).as())       // IntResult
+     *      .orElseGet(() -> err("Not a foo"));    // IntResult
+     * }</pre>
+     * @return this as an IntResult rather than an Ok or Err
+     */
+    default IntResult res() { return this; }
 
     /**
      * Collect a stream of {@link IntResult}s into a {@link IntResultBatch}.
@@ -311,10 +336,16 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
 
         @Override public boolean isErr() { return true; }
 
-        public <Z> @NonNull Result<Z> into() { return Result.err(value); }
+        public @NonNull String message() { return value.message(); }
+        public @NonNull Exception except() { return value.except(); }
+        public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
+        public @NonNull AnyError join(final @NonNull AnyError that) { return value.join(that); }
 
-        public @NonNull LongResult intoLong() { return LongResult.err(value); }
-        public @NonNull DoubleResult intoDouble() { return DoubleResult.err(value); }
+        public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
+
+        public @NonNull LongResult.Err intoLong() { return LongResult.err(value); }
+        public @NonNull DoubleResult.Err intoDouble() { return DoubleResult.err(value); }
+        public @NonNull VoidResult.Err intoVoid() { return VoidResult.err(value); }
 
         @Override public AnyError expectErr() { return value; }
 

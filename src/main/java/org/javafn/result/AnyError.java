@@ -38,6 +38,16 @@ public interface AnyError {
 	}
 
 	/**
+	 * If this error wraps an ExceptionError, attempt to get the exception.
+	 * If the exception is a checked exception, wrap it in a RuntimeException as the cause,
+	 * otherwise return the exception unmodified.
+	 * If it's any other class of AnyError, create a RuntimeException from the {@link #message()}.
+	 */
+	default @NonNull RuntimeException exceptUnchecked() {
+		return new RuntimeException(message());
+	}
+
+	/**
 	 * Construct a new ErrorList error type by joining that instance with this.
 	 */
 	default @NonNull AnyError join(@Nullable final AnyError that) {
@@ -55,16 +65,16 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static @NonNull Result<Void> fold(@NonNull final Result<?>... results) {
+	static @NonNull VoidResult fold(@NonNull final Result<?>... results) {
 		return fold(Arrays.asList(results));
 	}
-	static @NonNull Result<Void> fold(@NonNull final List<Result<?>> results) {
+	static @NonNull VoidResult fold(@NonNull final List<Result<?>> results) {
 		return results.stream()
 				.filter(Result::isErr)
 				.map(Result::expectErr)
 				.reduce(AnyError::join)
-				.map(Result::<Void>err)
-				.orElseGet(Result::ok);
+				.<VoidResult>map(VoidResult::err)
+				.orElseGet(VoidResult::ok);
 	}
 
 	static <O> @NonNull Result<O> fail(@NonNull final String errorMessage) {
@@ -161,6 +171,11 @@ public interface AnyError {
 			this((E) x, (Class<E>) x.getClass(), Optional.empty());
 		}
 		@Override public @NonNull Exception except() { return error; }
+		@Override public @NonNull RuntimeException exceptUnchecked() {
+			if (error instanceof RuntimeException)
+				return (RuntimeException) error;
+			return msgPrefix.map(prefix -> new RuntimeException(prefix, error)).orElseGet(() -> new RuntimeException(error));
+		}
 		@Override public @NonNull String message() {
 			final StringWriter sw = new StringWriter();
 			final PrintWriter pw = new PrintWriter(sw);

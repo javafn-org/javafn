@@ -5,8 +5,10 @@ import edu.umd.cs.findbugs.annotations.Nullable;
 import org.javafn.utils.Expect;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
@@ -57,41 +59,58 @@ import java.util.stream.Collector;
  * @see Result.Ok
  */
 public sealed interface Result<OK> permits Result.Err, Result.Ok {
-     /** Create a new Result wrapping a successful value. */
-    static <OK> @NonNull Result<OK> ok(@Nullable final OK ok) {
-        return new Ok<>(ok);
+     /** Create a new Ok Result wrapping a successful non-null value. */
+    static <OK> @NonNull Ok<OK> ok(@NonNull final OK ok) {
+        return new Ok<>(Objects.requireNonNull(ok));
     }
     /**
-     * Create a new Result indicating success with no associated value.
-     * A Void typed Ok result is similar to {@code Optional<ErrorType>} with the added semantics
-     * that a present value indicates an error and lack of a value indicates success, which is not clear
-     * purely from the API when an Optional is used.
+     * Create a new Result wrapping a successful non-null value, dropping type information
+     * so that the return value is a Result, not an Ok.
+     * see {@link #res()}
      */
-    static @NonNull Result<Void> ok() {
-        return new Ok<>(null);
+    static <OK> @NonNull Result<OK> okRes(@NonNull final OK ok) {
+        return ok(ok);
     }
 
     /** Create a new Result wrapping an error value. */
-    static <OK> @NonNull Result<OK> err(@NonNull final AnyError err) {
+    static <OK> @NonNull Err<OK> err(@NonNull final AnyError err) {
         return new Err<>(err);
     }
     /** Create a new Result wrapping an error message. */
-    static <OK> @NonNull Result<OK> err(@NonNull final String errorMessage) {
+    static <OK> @NonNull Err<OK> err(@NonNull final String errorMessage) {
         return new Err<>(AnyError.from(errorMessage));
     }
     /** Create a new Result wrapping a list of error messages. */
-    static <OK> @NonNull Result<OK> err(@NonNull final List<String> errorMessages) {
+    static <OK> @NonNull Err<OK> err(@NonNull final List<String> errorMessages) {
         return new Err<>(AnyError.from(errorMessages));
     }
     /** Create a new Result wrapping an exception. */
-    static <E extends Exception, OK> @NonNull Result<OK> err(@NonNull final E e) {return new Err<>(AnyError.from(e));}
-    static <E extends Exception, OK> @NonNull Result<OK> err(@NonNull final E e, @Nullable final String errorMessage) {
+    static <E extends Exception, OK> @NonNull Err<OK> err(@NonNull final E e) {return new Err<>(AnyError.from(e));}
+    static <E extends Exception, OK> @NonNull Err<OK> err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err<>(AnyError.from(e, errorMessage));
     }
-    static <E extends Enum<E>, OK> @NonNull Result<OK> err(@NonNull final E e) { return new Err<>(AnyError.from(e)); }
-    static <E extends Enum<E>, OK> @NonNull Result<OK> err(@NonNull final E e, @Nullable final String errorMessage) {
+    static <E extends Enum<E>, OK> @NonNull Err<OK> err(@NonNull final E e) { return new Err<>(AnyError.from(e)); }
+    static <E extends Enum<E>, OK> @NonNull Err<OK> err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err<>(AnyError.from(e, errorMessage));
     }
+
+    /**
+     * Drop any variant type information and treat this as a Result.
+     * <pre>{@code
+     *  Optional.of(foo)
+     *      .map(f -> Result.ok(foo)) // Ok<Foo>
+     *      // Does not compile because Err<Foo> is not an Ok
+     *      .orElseGet(() -> err("Not a foo"));
+     * }</pre>
+     * <pre>{@code
+     *  Optional.of(foo)
+     *      .map(f -> Result.ok(foo).as())      // Result<Foo>
+     *      .orElseGet(() -> err("Not a foo")); // Result<Foo>
+     * }</pre>
+     * @return this as a Result rather than an Ok or Err
+     */
+    default Result<OK> res() { return this; }
+
     /**
      * Collect a stream of {@link Result}s into a {@link ResultBatch}.
      * @return a collector that generates a ResultBatch
@@ -135,7 +154,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * @throws IllegalArgumentException if the parameter is anything except the method receiver
      * @see Ok#value()
      */
-    default @NonNull Ok<OK> as(@NonNull Ok<?> thiz) {
+    default @NonNull Ok<OK> res(@NonNull Ok<?> thiz) {
         throw new IllegalArgumentException("as(Ok) called on non-Ok instance; use instanceof Ok and its pattern variable");
     }
 
@@ -148,7 +167,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
 
     /**
      * Return true if this is an ok variant, false otherwise.  This function is useful in a stream pipeline.
-     * More general usage would involve an instanceof check with pattern matching followed by {@link #as(Ok)}.
+     * More general usage would involve an instanceof check with pattern matching followed by {@link #res(Ok)}.
      * @return true iff this is an ok variant
      */
     default boolean isOk() { return false; }
@@ -186,7 +205,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * @return the ok value in this Result
      * @throws IllegalStateException if this Result is not actually an Ok
      */
-    default @Nullable OK expectOk() {
+    default @NonNull OK expectOk() {
         throw new IllegalStateException("Expected Result to be an Ok instance, but it was not");
     }
 
@@ -372,7 +391,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * @return a value of some common type, produced by applying the appropriate mapping function
      * @param <Z> the result type
      */
-    <Z> @Nullable Z reduce(@NonNull Function<AnyError, Z> fnErr, @NonNull Function<OK, Z> fnOk);
+    <Z> Z reduce(@NonNull Function<AnyError, Z> fnErr, @NonNull Function<OK, Z> fnOk);
 
     /**
      * Call the appropriate side effect producing function and do not return anything.
@@ -395,6 +414,11 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
 
         @Override public boolean isErr() { return true; }
 
+        public @NonNull String message() { return value.message(); }
+        public @NonNull Exception except() { return value.except(); }
+        public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
+        public @NonNull AnyError join(final @NonNull AnyError that) { return value.join(that); }
+
         /**
          * Coerce the OK type to a new type and return this otherwise unmodified.
          * This function is not defined on Result.  You should obtain an Err by doing an instanceof check
@@ -410,11 +434,12 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
          *
          * @return this Err with the OK type coerced to a new type
          */
-        public <Z> @NonNull Result<Z> into() { return err(value); }
+        public <Z> @NonNull Err<Z> into() { return err(value); }
 
-        public @NonNull IntResult intoInt() { return IntResult.err(value); }
-        public @NonNull LongResult intoLong() { return LongResult.err(value); }
-        public @NonNull DoubleResult intoDouble() { return DoubleResult.err(value); }
+        public @NonNull IntResult.Err intoInt() { return IntResult.err(value); }
+        public @NonNull LongResult.Err intoLong() { return LongResult.err(value); }
+        public @NonNull DoubleResult.Err intoDouble() { return DoubleResult.err(value); }
+        public @NonNull VoidResult.Err intoVoid() { return VoidResult.err(value); }
 
         @Override public @NonNull AnyError expectErr() { return value; }
 
@@ -452,7 +477,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
             return fn.apply(value);
         }
 
-        @Override public <Z> @Nullable Z reduce(@NonNull final Function<AnyError, Z> fnErr, @NonNull final Function<OK, Z> fnOk) {
+        @Override public <Z> Z reduce(@NonNull final Function<AnyError, Z> fnErr, @NonNull final Function<OK, Z> fnOk) {
             return fnErr.apply(value);
         }
         @Override public void consume(@NonNull final Consumer<AnyError> fnErr, @NonNull final Consumer<OK> fnOk) {
@@ -480,7 +505,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * final Foo value;
      * {
      *     final Result<Foo> res = ...;
-     *     if (res instanceof Err<?> e) {
+     *     if (res instanceof Err<Foo> e) {
      *          return e.into();
      *     } else if (res instanceof Ok<?>) {
      *         value = res.as(o).value();
@@ -491,10 +516,10 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
      * This has been resolved in later versions of java.  We will likely remove the {@link Result#expectOk()}
      * methods when our minimum supported version can utilize the exhaustive test of the sealed type.
      */
-    record Ok<OK>(@Nullable OK value) implements Result<OK> {
+    record Ok<OK>(@NonNull OK value) implements Result<OK> {
 
         @Override
-        public @NonNull Ok<OK> as(@NonNull final Ok<?> thiz) {
+        public @NonNull Ok<OK> res(@NonNull final Ok<?> thiz) {
             if (thiz != this)
                 throw new IllegalArgumentException("Ok.as: argument must be the pattern variable bound to this Ok");
             return this;
@@ -502,9 +527,9 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
 
         @Override public boolean isOk() { return true; }
 
-        @Override public @Nullable OK expectOk() { return value; }
+        @Override public @NonNull OK expectOk() { return value; }
 
-        @Override public @NonNull Optional<OK> opt() { return Optional.ofNullable(value); }
+        @Override public @NonNull Optional<OK> opt() { return Optional.of(value); }
 
         @Override public <Q> @NonNull Result<Q> map(@NonNull final Function<AnyError, AnyError> fnErr, @NonNull final Function<OK, Q> fnOk) {
             return ok(fnOk.apply(value));
@@ -536,7 +561,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
         }
         @Override public <Z> @NonNull Result<Z> flatMap(@NonNull final Function<OK, Result<Z>> fn) { return fn.apply(value); }
 
-        @Override public <Z> @Nullable Z reduce(@NonNull final Function<AnyError, Z> fnErr, @NonNull final Function<OK, Z> fnOk) {
+        @Override public <Z> Z reduce(@NonNull final Function<AnyError, Z> fnErr, @NonNull final Function<OK, Z> fnOk) {
             return fnOk.apply(value);
         }
 
@@ -649,7 +674,7 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
         public static <OK> @NonNull Function<Result<OK>, LongResult> mapToLong(@NonNull ToLongFunction<OK> fn) {
             return res -> res.mapToLong(fn);
         }
-        public static <OK> @NonNull Function<Result<OK>, DoubleResult> mapToLong(@NonNull ToDoubleFunction<OK> fn) {
+        public static <OK> @NonNull Function<Result<OK>, DoubleResult> mapToDouble(@NonNull ToDoubleFunction<OK> fn) {
             return res -> res.mapToDouble(fn);
         }
 

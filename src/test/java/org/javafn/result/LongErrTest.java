@@ -112,7 +112,7 @@ class LongErrTest {
     @Test
     @DisplayName("LongErr.into coerces OK type")
     void testInto() {
-        var res = LongResult.err("fail");
+        var res = LongResult.err("fail").res();
         if (res instanceof LongResult.Err asErr) {
             Result<String> coerced = asErr.into();
             assertTrue(coerced.isErr());

@@ -54,12 +54,9 @@ class OkTest {
     @Test
     @DisplayName("Ok.filter returns result of predicate")
     void testFilter() {
-        var res1 = Result.ok("hello");
-        assertTrue(res1.filter(s -> s.startsWith("h")));
-        assertFalse(res1.filter(s -> s.startsWith("z")));
-
-        var res2 = Result.ok(null);
-        assertFalse(res2.filter(Objects::nonNull));
+        var res = Result.ok("hello");
+        assertTrue(res.filter(s -> s.startsWith("h")));
+        assertFalse(res.filter(s -> s.startsWith("z")));
     }
 
     @Test
@@ -132,10 +129,13 @@ class OkTest {
     @Test
     @DisplayName("Ok.opt returns Optional of value")
     void testOpt() {
-        var res1 = Result.ok("value");
-        assertEquals("value", res1.opt().get());
+        var res = Result.ok("value");
+        assertEquals("value", res.opt().get());
+    }
 
-        var res2 = Result.ok((String)null);
-        assertTrue(res2.opt().isEmpty());
+    @Test
+    @DisplayName("Ok.(null) throws up")
+    void testNull() {
+        assertThrows(NullPointerException.class, () -> Result.ok(null));
     }
 }
