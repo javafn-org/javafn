@@ -21,12 +21,38 @@ repositories {
     mavenCentral()
 }
 
+def generatedMainJava = layout.buildDirectory.dir("generated/main/java")
+
+tasks.register('genSrc', JavaExec) {
+	group = 'code generation'
+	description = 'Generates source code'
+	classpath = sourceSets.codeGen.runtimeClasspath
+	mainClass = 'org.javafn.codeGen.GenerateCore'
+	outputs.dir(generatedMainJava)
+	workingDir = projectDir
+	args generatedMainJava.get().asFile.absolutePath, sourceCompatibility.toString()
+}
+
+sourceSets {
+	codeGen {
+		java.srcDir 'src/genSrc/java'
+	}
+	main {
+		java.srcDir(tasks.named('genSrc'))
+	}
+}
+
+tasks.named('compileJava') { dependsOn tasks.named('genSrc') }
+
 dependencies {
 	compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.+")
 	implementation('org.javafn:javafn-utils:0.1.+')
 	testImplementation(platform('org.junit:junit-bom:6.1.+'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
-	testRuntimeOnly('org.junit.platform:junit-platform-launcher')}
+	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+
+	codeGenImplementation 'com.github.javaparser:javaparser-core:3.26.2'
+}
 
 centralPortal {
 	username = System.getenv("OSSRH_SONATYPE_USERNAME")
