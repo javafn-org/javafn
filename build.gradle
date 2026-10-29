@@ -52,6 +52,7 @@ dependencies {
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
 
 	codeGenImplementation 'com.github.javaparser:javaparser-core:3.26.2'
+	codeGenImplementation('org.javafn:javafn-utils:0.1.+')
 }
 
 centralPortal {
