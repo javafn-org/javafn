@@ -5,13 +5,12 @@ plugins {
 	id 'net.thebugmc.gradle.sonatype-central-portal-publisher' version "1.2.4"
 }
 
-sourceCompatibility = JavaVersion.VERSION_17
-targetCompatibility = JavaVersion.VERSION_17
-
 group = 'org.javafn'
 version = "${major}.${minor}.${patch}"
 
+
 java {
+	toolchain { languageVersion = JavaLanguageVersion.of(17) }
     withJavadocJar()
     withSourcesJar()
 }
@@ -46,7 +45,7 @@ tasks.named('compileJava') { dependsOn tasks.named('genSrc') }
 
 dependencies {
 	compileOnly("com.github.spotbugs:spotbugs-annotations:4.9.+")
-	implementation('org.javafn:javafn-utils:0.1.+')
+	implementation('org.javafn:javafn-utils:0.2.+')
 	testImplementation(platform('org.junit:junit-bom:6.1.+'))
 	testImplementation('org.junit.jupiter:junit-jupiter')
 	testRuntimeOnly('org.junit.platform:junit-platform-launcher')
@@ -116,6 +115,13 @@ tasks.withType(Sign) {
 	onlyIf { System.getenv().containsKey("CI") }
 }
 
+tasks.named('compileTestJava', JavaCompile) {
+	options.compilerArgs.add('--enable-preview')
+}
+
+tasks.named('test', Test) {
+	jvmArgs('--enable-preview')
+}
 test {
 	useJUnitPlatform()
 	testLogging {
