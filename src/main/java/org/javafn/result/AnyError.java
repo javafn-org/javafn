@@ -2,6 +2,7 @@ package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.intellij.lang.annotations.PrintFormat;
 import org.javafn.utils.Data;
 
 import java.io.PrintWriter;
@@ -65,13 +66,13 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static @NonNull VoidResult fold(@NonNull final Result<?>... results) {
+	static @NonNull VoidResult fold(@NonNull final AnyResult... results) {
 		return fold(Arrays.asList(results));
 	}
-	static @NonNull VoidResult fold(@NonNull final List<Result<?>> results) {
+	static @NonNull VoidResult fold(@NonNull final List<AnyResult> results) {
 		return results.stream()
-				.filter(Result::isErr)
-				.map(Result::expectErr)
+				.filter(AnyResult::isErr)
+				.map(AnyResult::expectErr)
 				.reduce(AnyError::join)
 				.<VoidResult>map(VoidResult::err)
 				.orElseGet(VoidResult::ok);
@@ -79,6 +80,9 @@ public interface AnyError {
 
 	static <O> @NonNull Result<O> fail(@NonNull final String errorMessage) {
 		return err(new StringError(errorMessage));
+	}
+	static <O> @NonNull Result<O> fail(@NonNull @PrintFormat final String errorMessage, final Object... args) {
+		return err(new StringError(errorMessage, args));
 	}
 	static <O> @NonNull Result<O> fail(@NonNull final List<String> errorMessages) {
 		return err(new ErrorList(errorMessages.stream().map(AnyError::from).toList()));
@@ -107,6 +111,9 @@ public interface AnyError {
 
 	static @NonNull AnyError from(@NonNull final String errorMessage) {
 		return new StringError(errorMessage);
+	}
+	static @NonNull AnyError from(@NonNull @PrintFormat final String errorMessage, final Object... args) {
+		return new StringError(errorMessage, args);
 	}
 	static @NonNull AnyError from(@NonNull final List<String> errorMessages) {
 		return new ErrorList(errorMessages.stream().map(AnyError::from).toList());
@@ -158,6 +165,9 @@ public interface AnyError {
 	}
 
 	record StringError(@NonNull String message) implements AnyError {
+		public StringError(@NonNull @PrintFormat final String errorMessage, final Object... args) {
+			this(errorMessage.formatted(args));
+		}
 		@Override public @NonNull String toString() { return message; }
 	}
 

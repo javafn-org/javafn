@@ -64,8 +64,12 @@ public class GenerateCore {
     private static final String DECODE_METHODS = """
             private record DecodedPrefix(boolean negative, int radix, String remainder) {
                 static Result<DecodedPrefix> decodePrefix(String nm) {
-                    if (nm.isEmpty())
-                        return Result.err("Zero length string");
+                    {
+                        final Result<String> _nm = requireNonNull(nm, "nm")
+                                .failIf(String::isEmpty,
+                                        emptyString -> AnyError.from("Zero length string"));
+                        if (_nm instanceof Result.Err<?> err) return err.into();
+                    }
 
                     final boolean negative;
 

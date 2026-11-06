@@ -1,9 +1,12 @@
 package org.javafn.either;
 
+import org.javafn.result.Result;
+
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 /**
  * An algebraic sum type that represents one of two possible values, neither of which is "better" than the other.
@@ -30,6 +33,11 @@ public sealed interface Either<L, R> permits Either.Left, Either.Right {
 		return new Left<>(left);
 	}
 
+	static <L, R> Result<Either<L, R>> of(final Supplier<Result<L>> maybeLeft, final Supplier<Result<R>> maybeRight) {
+		return maybeLeft.get()
+				.map(Either::<L, R>left)
+				.flatRecover(err -> maybeRight.get().map(Right::new));
+	}
 	/**
 	 * After performing an instanceof check, turn this Either into a concrete Left type.
 	 * <pre>{@code

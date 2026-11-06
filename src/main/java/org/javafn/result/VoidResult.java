@@ -15,9 +15,6 @@ import java.util.function.IntSupplier;
 import java.util.function.LongSupplier;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.function.ToDoubleFunction;
-import java.util.function.ToIntFunction;
-import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
 
 /**
@@ -47,7 +44,7 @@ import java.util.stream.Collector;
  * @see VoidResult.Err
  * @see VoidResult.Ok
  */
-public sealed interface VoidResult permits VoidResult.Err, VoidResult.Ok {
+public sealed interface VoidResult extends AnyResult permits VoidResult.Err, VoidResult.Ok {
     /**
      * Create a new Result indicating success with no associated value.
      */
@@ -495,7 +492,7 @@ public sealed interface VoidResult permits VoidResult.Err, VoidResult.Ok {
      * Namely, the text {@code res -> res} is repeated to the point of becoming noise.
      */
     final class Oks {
-        public static <OK, Z> @NonNull Function<VoidResult, Result<Z>> map(@NonNull final Supplier<Z> fn) {
+        public static <Z> @NonNull Function<VoidResult, Result<Z>> map(@NonNull final Supplier<Z> fn) {
             return res -> res.map(fn);
         }
 
@@ -511,7 +508,7 @@ public sealed interface VoidResult permits VoidResult.Err, VoidResult.Ok {
             return res -> res.failIf(testFn, mapFn);
         }
 
-        public static <OK, Z> @NonNull Function<VoidResult, Result<Z>> flatMap(@NonNull final Supplier<Result<Z>> fn) {
+        public static <Z> @NonNull Function<VoidResult, Result<Z>> flatMap(@NonNull final Supplier<Result<Z>> fn) {
             return res -> res.flatMap(fn);
         }
 

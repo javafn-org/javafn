@@ -2,6 +2,7 @@ package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.intellij.lang.annotations.PrintFormat;
 import org.javafn.utils.Expect;
 
 import java.util.List;
@@ -58,7 +59,7 @@ import java.util.stream.Collector;
  * @see Result.Err
  * @see Result.Ok
  */
-public sealed interface Result<OK> permits Result.Err, Result.Ok {
+public sealed interface Result<OK> extends AnyResult permits Result.Err, Result.Ok {
      /** Create a new Ok Result wrapping a successful non-null value. */
     static <OK> @NonNull Ok<OK> ok(@NonNull final OK ok) {
         return new Ok<>(Objects.requireNonNull(ok));
@@ -79,6 +80,9 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
     /** Create a new Result wrapping an error message. */
     static <OK> @NonNull Err<OK> err(@NonNull final String errorMessage) {
         return new Err<>(AnyError.from(errorMessage));
+    }
+    static <OK> @NonNull Err<OK> err(@NonNull @PrintFormat final String errorMessage, final Object... args) {
+        return new Err<>(AnyError.from(errorMessage, args));
     }
     /** Create a new Result wrapping a list of error messages. */
     static <OK> @NonNull Err<OK> err(@NonNull final List<String> errorMessages) {
@@ -341,13 +345,33 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
 
     /**
      * If this result is an ok, apply the supplied predicate, and if that returns true, apply the
-     * supplied mapping function to the ok value and return an err result with the result.
+     * supplied mapping function to the ok value and return an err result with the supplied error.
      * @param testFn the predicate to apply to the ok value
      * @param mapFn the mapping function to apply to the ok value
      * @return a new result with the ok value mapped to an err if this is an ok and the supplied predicate matches,
      * otherwise return this unmodified
      */
     default @NonNull Result<OK> failIf(@NonNull Predicate<OK> testFn, @NonNull Function<OK, AnyError> mapFn) { return this; }
+
+    /**
+     * If this result is an ok, apply the supplied predicate, and if that returns true, apply the
+     * supplied mapping function to the ok value and return an err result, passing the message to {@link AnyError#from}.
+     * @param testFn the predicate to apply to the ok value
+     * @param mapFn the mapping function to apply to the ok value
+     * @return a new result with the ok value mapped to an err if this is an ok and the supplied predicate matches,
+     * otherwise return this unmodified
+     */
+    default @NonNull Result<OK> failIfMsg(@NonNull Predicate<OK> testFn, @NonNull Function<OK, String> mapFn) { return this; }
+
+    /**
+     * If this result is an ok, apply the supplied predicate, and if that returns true, apply the
+     * supplied mapping function to the ok value and return an err result, passing the exception to {@link AnyError#from}.
+     * @param testFn the predicate to apply to the ok value
+     * @param mapFn the mapping function to apply to the ok value
+     * @return a new result with the ok value mapped to an err if this is an ok and the supplied predicate matches,
+     * otherwise return this unmodified
+     */
+    default @NonNull Result<OK> failIfEx(@NonNull Predicate<OK> testFn, @NonNull Function<OK, ? extends Exception> mapFn) { return this; }
 
     /**
      * Apply the supplied mapping function, which itself returns a Result, to this Result's err value if it is an err.
@@ -555,6 +579,18 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
             }
             return this;
         }
+        @Override public @NonNull Result<OK> failIfMsg(@NonNull final Predicate<OK> testFn, @NonNull final Function<OK, String> mapFn) {
+            if (testFn.test(value)) {
+                return AnyError.fail(mapFn.apply(value));
+            }
+            return this;
+        }
+        @Override public @NonNull Result<OK> failIfEx(@NonNull final Predicate<OK> testFn, @NonNull final Function<OK, ? extends Exception> mapFn) {
+            if (testFn.test(value)) {
+                return AnyError.fail(mapFn.apply(value));
+            }
+            return this;
+        }
 
         @Override public @NonNull Result<OK> flatRecover(@NonNull final Function<AnyError, Result<OK>> fn) {
             return this;
@@ -659,6 +695,14 @@ public sealed interface Result<OK> permits Result.Err, Result.Ok {
         public static <OK> @NonNull Function<Result<OK>, Result<OK>> failIf(
                 @NonNull final Predicate<OK> testFn, @NonNull final Function<OK, AnyError> mapFn) {
             return res -> res.failIf(testFn, mapFn);
+        }
+        public static <OK> @NonNull Function<Result<OK>, Result<OK>> failIfMsg(
+                @NonNull final Predicate<OK> testFn, @NonNull final Function<OK, String> mapFn) {
+            return res -> res.failIfMsg(testFn, mapFn);
+        }
+        public static <OK> @NonNull Function<Result<OK>, Result<OK>> failIfEx(
+                @NonNull final Predicate<OK> testFn, @NonNull final Function<OK, ? extends Exception> mapFn) {
+            return res -> res.failIfEx(testFn, mapFn);
         }
 
         public static <OK, Z> @NonNull Function<Result<OK>, Result<Z>> flatMap(@NonNull final Function<OK, Result<Z>> fn) {

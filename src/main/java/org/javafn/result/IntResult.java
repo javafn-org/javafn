@@ -2,6 +2,8 @@ package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.intellij.lang.annotations.PrintFormat;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +21,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collector;
 import java.util.stream.IntStream;
 
-public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
+public sealed interface IntResult extends AnyResult permits IntResult.Err, IntResult.Ok {
      /** Create a new Result wrapping a successful integer value. */
     static Ok ok(final int ok) {
         return new Ok(ok);
@@ -40,6 +42,9 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
     /** Create a new IntResult wrapping an error message. */
     static Err err(final String errorMessage) {
         return new Err(AnyError.from(errorMessage));
+    }
+    static @NonNull Err err(@NonNull @PrintFormat final String errorMessage, final Object... args) {
+        return new Err(AnyError.from(errorMessage, args));
     }
     /** Create a new IntResult wrapping a list of error messages. */
     static Err err(final List<String> errorMessages) {
@@ -110,7 +115,7 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
      * @return the error value in this IntResult
      * @throws IllegalStateException if this IntResult is not actually an Err
      */
-    default AnyError expectErr() {
+    default @NotNull AnyError expectErr() {
         throw new IllegalStateException("Expected IntResult to be an Err instance, but it was not");
     }
 
@@ -132,7 +137,7 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
         throw new IllegalStateException("Expected IntResult to be an Ok instance, but it was not");
     }
 
-    default Optional<AnyError> optErr() {
+    default @NonNull Optional<AnyError> optErr() {
         return Optional.empty();
     }
 
@@ -160,7 +165,7 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
      * @param fn the function to apply to an ok value
      * @return a new result with the ok mapped or this unmodified if this is an err
      */
-    default IntResult map(final IntUnaryOperator fn) { return this; };
+    default IntResult map(final IntUnaryOperator fn) { return this; }
 
     LongResult mapToLong(IntToLongFunction fn);
 
@@ -184,7 +189,7 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
      * @param fn the predicate to apply to the error value
      * @return true if this is not an error or the result of applying the predicate to the error value
      */
-    default boolean filterErr(Predicate<AnyError> fn) {
+    default boolean filterErr(@NotNull Predicate<AnyError> fn) {
         return true;
     }
 
@@ -206,7 +211,7 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
      * @param fn the predicate to apply to the error value
      * @return false if this is not an error or the result of applying the predicate to the error value
      */
-    default boolean isErrAnd(Predicate<AnyError> fn) { return false; }
+    default boolean isErrAnd(@NotNull Predicate<AnyError> fn) { return false; }
 
     /**
      * Apply the supplied predicate to the wrapped ok value or return false if this is an error.
@@ -347,9 +352,9 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
         public @NonNull DoubleResult.Err intoDouble() { return DoubleResult.err(value); }
         public @NonNull VoidResult.Err intoVoid() { return VoidResult.err(value); }
 
-        @Override public AnyError expectErr() { return value; }
+        @Override public @NotNull AnyError expectErr() { return value; }
 
-        @Override public Optional<AnyError> optErr() { return Optional.ofNullable(value); }
+        @Override public @NotNull Optional<AnyError> optErr() { return Optional.ofNullable(value); }
 
         @Override public IntResult map(final Function<AnyError, AnyError> fnErr, final IntUnaryOperator fnOk) {
             return err(fnErr.apply(value));
@@ -362,9 +367,9 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
 
         @Override public IntResult mapErr(final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
 
-        @Override public boolean filterErr(final Predicate<AnyError> fn) { return fn.test(value); }
+        @Override public boolean filterErr(final @NotNull Predicate<AnyError> fn) { return fn.test(value); }
 
-        @Override public boolean isErrAnd(Predicate<AnyError> fn) { return fn.test(value); }
+        @Override public boolean isErrAnd(@NotNull Predicate<AnyError> fn) { return fn.test(value); }
 
         @Override public IntResult ifErr(final Consumer<AnyError> fn) {
             fn.accept(value);
@@ -485,7 +490,7 @@ public sealed interface IntResult permits IntResult.Err, IntResult.Ok {
             return res -> res.recoverIf(testFn, mapFn);
         }
 
-        public static <OK, Z> Function<IntResult, IntResult> flatRecover(
+        public static Function<IntResult, IntResult> flatRecover(
                 final Function<AnyError, IntResult> fn) {
             return res -> res.flatRecover(fn);
         }
