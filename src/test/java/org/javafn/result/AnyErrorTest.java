@@ -23,6 +23,15 @@ class AnyErrorTest {
     }
 
     @Test
+    @DisplayName("ErrorWithContext formats message correctly")
+    void testErrorWithContext() {
+        var errBase = AnyError.from("simple error");
+        var errWithContext = errBase.withContext("critical error");
+        assertEquals("critical error: simple error", errWithContext.message());
+        assertInstanceOf(AnyError.ErrorWithContext.class, errWithContext);
+    }
+
+    @Test
     @DisplayName("StringError.except() returns a new RuntimeException")
     void testStringErrorExcept() {
         var err = AnyError.from("simple error");

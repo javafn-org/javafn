@@ -4,6 +4,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import org.intellij.lang.annotations.PrintFormat;
 import org.javafn.utils.Data;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -49,6 +50,14 @@ public interface AnyError {
 	}
 
 	/**
+	 * Return a new AnyError with added context.  The message will be
+	 * <pre>"{@code contextMessage}: {@code this.message()}"</pre>
+	 */
+	default @NonNull AnyError withContext(final @PrintFormat String message, final Object... args) {
+		return new ErrorWithContext(message.formatted(args), this);
+	}
+
+	/**
 	 * Construct a new ErrorList error type by joining that instance with this.
 	 */
 	default @NonNull AnyError join(@Nullable final AnyError that) {
@@ -66,10 +75,10 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static @NonNull VoidResult fold(@NonNull final AnyResult<?>... results) {
+	static @NonNull VoidResult fold(@NonNull final AnyResult<?, ?>... results) {
 		return fold(Arrays.asList(results));
 	}
-	static @NonNull VoidResult fold(@NonNull final List<AnyResult<?>> results) {
+	static @NonNull VoidResult fold(@NonNull final List<AnyResult<?, ?>> results) {
 		return results.stream()
 				.filter(AnyResult::isErr)
 				.map(AnyResult::expectErr)
@@ -92,6 +101,7 @@ public interface AnyError {
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new ExceptionError<>(e, type, Optional.empty()));
 	}
+	@Deprecated(forRemoval = true)
 	static <E extends Exception, O> @NonNull Result<O> fail(@NonNull final E e, @Nullable final String msgPrefix) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
@@ -102,6 +112,7 @@ public interface AnyError {
 		final Class<E> type = (Class<E>) e.getClass();
 		return err(new EnumError<>(e, type, Optional.empty()));
 	}
+	@Deprecated(forRemoval = true)
 	static <E extends Enum<E>, O> @NonNull Result<O> fail(@NonNull final E e, @Nullable final String msgDetails) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
@@ -143,6 +154,24 @@ public interface AnyError {
 	}
 
 	/* *******************************************************************************/
+
+	record ErrorWithContext(@NonNull String context, @NonNull AnyError err) implements AnyError {
+		@Override public @NotNull String message() {
+			return context + ": " + err.message();
+		}
+		@Override public @NonNull Exception except() {
+			if (err instanceof ExceptionError<?> x) {
+				return new RuntimeException(context, x.error);
+			}
+			return new RuntimeException(message());
+		}
+		@Override public @NonNull RuntimeException exceptUnchecked() {
+			if (err instanceof ExceptionError<?> x) {
+				return new RuntimeException(context, x.error);
+			}
+			return new RuntimeException(message());
+		}
+	}
 
 	record ErrorList(@NonNull List<AnyError> errors) implements AnyError {
 		public ErrorList() {

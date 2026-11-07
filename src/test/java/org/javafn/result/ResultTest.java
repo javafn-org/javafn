@@ -72,20 +72,4 @@ class ResultTest {
         var res = Result.ok("success");
         assertThrows(IllegalStateException.class, res::expectErr);
     }
-
-    @Test
-    @DisplayName("as(Ok) throws exception when called on an Err")
-    void testAsFailure() {
-        var res = Result.<String>err("fail");
-        var okInstance = new Result.Ok<>("some ok");
-        assertThrows(IllegalArgumentException.class, () -> res.res(okInstance));
-    }
-
-    @Test
-    @DisplayName("as(Ok) throws exception when argument is not the instance itself")
-    void testAsWrongInstance() {
-        var res = Result.ok("success");
-        var okInstance = new Result.Ok<>("different ok");
-        assertThrows(IllegalArgumentException.class, () -> res.res(okInstance));
-    }
 }

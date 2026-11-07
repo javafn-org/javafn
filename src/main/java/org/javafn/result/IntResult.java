@@ -21,7 +21,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collector;
 import java.util.stream.IntStream;
 
-public sealed interface IntResult extends AnyResult<Integer> permits IntResult.Err, IntResult.Ok {
+public sealed interface IntResult extends AnyResult<Integer, IntResult> permits IntResult.Err, IntResult.Ok {
      /** Create a new Result wrapping a successful integer value. */
     static Ok ok(final int ok) {
         return new Ok(ok);
@@ -60,22 +60,7 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
         return new Err(AnyError.from(e, errorMessage));
     }
 
-    /**
-     * Drop any variant type information and treat this as a IntResult.
-     * <pre>{@code
-     *  Optional.of(foo)
-     *      .map(f -> IntResult.ok(67)) // Ok
-     *      // Does not compile because Err is not an Ok
-     *      .orElseGet(() -> err("Not a foo"));
-     * }</pre>
-     * <pre>{@code
-     *  Optional.of(foo)
-     *      .map(f -> IntResult.ok(67).as())       // IntResult
-     *      .orElseGet(() -> err("Not a foo"));    // IntResult
-     * }</pre>
-     * @return this as an IntResult rather than an Ok or Err
-     */
-    default IntResult res() { return this; }
+    @Override default IntResult res() { return this; }
 
     /**
      * Collect a stream of {@link IntResult}s into a {@link IntResultBatch}.
@@ -85,38 +70,6 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
      */
     static Collector<IntResult, ?, IntResultBatch> batch() {
         return IntResultBatch.collector();
-    }
-
-    /**
-     * Return true if this is an err variant, false otherwise.  This function is useful in a stream pipeline.
-     * More general usage would involve an instanceof check with pattern matching.
-     * @return true iff this is an err variant
-     */
-    default boolean isErr() { return false; }
-
-    /**
-     * Return true if this is an ok variant, false otherwise.
-     * @return true iff this is an ok variant
-     */
-    default boolean isOk() { return false; }
-
-    /**
-     * Unsafe operation, only safe in a branch opposite a test against ok
-     * or inside a branch that checked {@link #isErr()}.
-     * Access the error value or throw an exception.
-     * <pre>{@code
-     * final IntResult res = ...;
-     * if (res instanceof Ok o) {
-     *     final int v = o.value();
-     * } else {
-     *     AnyError e = res.expectErr();
-     * }
-     * }</pre>
-     * @return the error value in this IntResult
-     * @throws IllegalStateException if this IntResult is not actually an Err
-     */
-    default @NotNull AnyError expectErr() {
-        throw new IllegalStateException("Expected IntResult to be an Err instance, but it was not");
     }
 
     /**
@@ -137,10 +90,6 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
         throw new IllegalStateException("Expected IntResult to be an Ok instance, but it was not");
     }
 
-    default @NonNull Optional<AnyError> optErr() {
-        return Optional.empty();
-    }
-
     default OptionalInt opt() {
         return OptionalInt.empty();
     }
@@ -153,12 +102,7 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
      */
      IntResult map(Function<AnyError, AnyError> fnErr, IntUnaryOperator fnOk);
 
-    /**
-     * Apply the mapping function to the error value if this is an Err, otherwise return this
-     * @param fn the function to apply to an error value
-     * @return a new result with the error mapped or this unmodified if this is an ok
-     */
-    default IntResult mapErr(Function<AnyError, AnyError> fn) { return this; }
+    @Override default @NotNull IntResult mapErr(final @NotNull Function<AnyError, AnyError> fn) { return this; }
 
     /**
      * Apply the mapping function to the ok value if this is an Ok, otherwise return this
@@ -177,23 +121,6 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
     <Z> Result<Z> mapToObj(IntFunction<Z> fn);
 
     /**
-     * Convert this IntResult into a {@link Result<Integer>} by boxing the wrapped ok or passing the error unchanged.
-     * @return a Result with this ok int value boxed or the err value unchanged
-     */
-    Result<Integer> boxed();
-
-    /**
-     * Apply the supplied predicate to the wrapped error value or return true if this is an ok.
-     * Semantically, {@code return (this instanceof Ok || fn.test(err))}
-     * If you want {@code &&} semantics, use {@link #isErrAnd(Predicate)}
-     * @param fn the predicate to apply to the error value
-     * @return true if this is not an error or the result of applying the predicate to the error value
-     */
-    default boolean filterErr(@NotNull Predicate<AnyError> fn) {
-        return true;
-    }
-
-    /**
      * Apply the supplied predicate to the wrapped ok value or return true if this is an err.
      * Semantically, {@code return (this instanceof Err || fn.test(ok))}
      * If you want {@code &&} semantics, use {@link #isOkAnd(IntPredicate)}
@@ -205,15 +132,6 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
     }
 
     /**
-     * Apply the supplied predicate to the wrapped error value or return false if this is an ok.
-     * Semantically, {@code return (this instanceof Err && fn.test(err))}
-     * If you want {@code ||} semantics, use {@link #filterErr(Predicate)}
-     * @param fn the predicate to apply to the error value
-     * @return false if this is not an error or the result of applying the predicate to the error value
-     */
-    default boolean isErrAnd(@NotNull Predicate<AnyError> fn) { return false; }
-
-    /**
      * Apply the supplied predicate to the wrapped ok value or return false if this is an error.
      * Semantically, {@code return (this instanceof Ok && fn.test(ok))}
      * If you want {@code ||} semantics, use {@link #filter(IntPredicate)}
@@ -222,18 +140,7 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
      */
     default boolean isOkAnd(IntPredicate fn) { return false; }
 
-    /**
-     * Apply the supplied consumer to the wrapped err value, or if this is an ok, perform no operation.
-     * <strong>
-     *     This function is used to achieve side effects.
-     *     You are strongly encouraged to document the side effect if it involves mutating external state.
-     * </strong>
-     * In the most innocuous case, you're writing to a log.
-     * In other cases, you could be modifying a collection, for example,
-     * Collecting a list of errors before filtering them from the pipeline.
-     * @return this, unmodified
-     */
-    default IntResult ifErr(Consumer<AnyError> fn) {
+    @Override default @NonNull IntResult ifErr(final @NonNull Consumer<AnyError> fn) {
         return this;
     }
 
@@ -327,27 +234,20 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
      */
     void consume(Consumer<AnyError> fnErr, IntConsumer fnOk);
 
-    /**
-     * An IntResult implementation that wraps an error value, obtained by calling {@link IntResult#err(AnyError)}.
-     * To access {@link Err#value}, You should obtain an Err by doing an instanceof check
-     * <pre>{@code
-     * final Result<String> res = ...
-     * if (res instanceof Err e) {
-     *     final AnyError value = e.value();
-     * }
-     * }</pre>
-     */
-    record Err(AnyError value) implements IntResult {
+    record Err(AnyError value) implements IntResult, AnyErrVariant {
 
         @Override public boolean isErr() { return true; }
 
         public @NonNull String message() { return value.message(); }
         public @NonNull Exception except() { return value.except(); }
         public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
-        public @NonNull AnyError join(final @NonNull AnyError that) { return value.join(that); }
+        public @NonNull Err join(final @NonNull AnyError that) { return err(value.join(that)); }
+        public @NonNull Err withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
+            return err(value.withContext(msgFormat, args));
+        }
 
         public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
-
+        public @NonNull Err intoInt() { return this; }
         public @NonNull LongResult.Err intoLong() { return LongResult.err(value); }
         public @NonNull DoubleResult.Err intoDouble() { return DoubleResult.err(value); }
         public @NonNull VoidResult.Err intoVoid() { return VoidResult.err(value); }
@@ -365,13 +265,13 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
         @Override public <Z> Result<Z> mapToObj(IntFunction<Z> fn) { return Result.err(value); }
         @Override public Result<Integer> boxed() { return Result.err(value); }
 
-        @Override public IntResult mapErr(final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
+        @Override public @NotNull IntResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
 
         @Override public boolean filterErr(final @NotNull Predicate<AnyError> fn) { return fn.test(value); }
 
-        @Override public boolean isErrAnd(@NotNull Predicate<AnyError> fn) { return fn.test(value); }
+        @Override public boolean isErrAnd(final @NotNull Predicate<AnyError> fn) { return fn.test(value); }
 
-        @Override public IntResult ifErr(final Consumer<AnyError> fn) {
+        @Override public @NonNull IntResult ifErr(final @NonNull Consumer<AnyError> fn) {
             fn.accept(value);
             return this;
         }
@@ -495,7 +395,7 @@ public sealed interface IntResult extends AnyResult<Integer> permits IntResult.E
             return res -> res.flatRecover(fn);
         }
 
-        public static  Consumer<IntResult> ifErr(final Consumer<AnyError> fn) {
+        public static Consumer<IntResult> ifErr(final Consumer<AnyError> fn) {
             return res -> res.ifErr(fn);
         }
 

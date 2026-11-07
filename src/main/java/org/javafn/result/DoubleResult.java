@@ -21,7 +21,7 @@ import java.util.function.ToDoubleFunction;
 import java.util.stream.Collector;
 import java.util.stream.DoubleStream;
 
-public sealed interface DoubleResult extends AnyResult<Double> permits DoubleResult.Err, DoubleResult.Ok {
+public sealed interface DoubleResult extends AnyResult<Double, DoubleResult> permits DoubleResult.Err, DoubleResult.Ok {
     /** Create a new Result wrapping a successful integer value. */
     static Ok ok(final double ok) {
         return new DoubleResult.Ok(ok);
@@ -60,22 +60,7 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
         return new Err(AnyError.from(e, errorMessage));
     }
 
-    /**
-     * Drop any variant type information and treat this as a DoubleResult.
-     * <pre>{@code
-     *  Optional.of(foo)
-     *      .map(f -> DoubleResult.ok(67.76)) // Ok
-     *      // Does not compile because Err is not an Ok
-     *      .orElseGet(() -> err("Not a foo"));
-     * }</pre>
-     * <pre>{@code
-     *  Optional.of(foo)
-     *      .map(f -> DoubleResult.ok(67.76).as()) // DoubleResult
-     *      .orElseGet(() -> err("Not a foo"));    // DoubleResult
-     * }</pre>
-     * @return this as a DoubleResult rather than an Ok or Err
-     */
-    default DoubleResult res() { return this; }
+    @Override default DoubleResult res() { return this; }
 
     /**
      * Collect a stream of {@link DoubleResult}s into a {@link DoubleResultBatch}.
@@ -85,38 +70,6 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
      */
     static Collector<DoubleResult, ?, DoubleResultBatch> batch() {
         return DoubleResultBatch.collector();
-    }
-
-    /**
-     * Return true if this is an err variant, false otherwise.  This function is useful in a stream pipeline.
-     * More general usage would involve an instanceof check with pattern matching.
-     * @return true iff this is an err variant
-     */
-    default boolean isErr() { return false; }
-
-    /**
-     * Return true if this is an ok variant, false otherwise.
-     * @return true iff this is an ok variant
-     */
-    default boolean isOk() { return false; }
-
-    /**
-     * Unsafe operation, only safe in a branch opposite a test against ok
-     * or inside a branch that checked {@link #isErr()}.
-     * Access the error value or throw an exception.
-     * <pre>{@code
-     * final DoubleResult res = ...;
-     * if (res instanceof Ok o) {
-     *     final double v = o.value();
-     * } else {
-     *     AnyError e = res.expectErr();
-     * }
-     * }</pre>
-     * @return the error value in this DoubleResult
-     * @throws IllegalStateException if this DoubleResult is not actually an Err
-     */
-    default @NotNull AnyError expectErr() {
-        throw new IllegalStateException("Expected DoubleResult to be an Err instance, but it was not");
     }
 
     /**
@@ -137,10 +90,6 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
         throw new IllegalStateException("Expected DoubleResult to be an Ok instance, but it was not");
     }
 
-    default @NotNull Optional<AnyError> optErr() {
-        return Optional.empty();
-    }
-
     default OptionalDouble opt() {
         return OptionalDouble.empty();
     }
@@ -153,12 +102,7 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
      */
     DoubleResult map(Function<AnyError, AnyError> fnErr, DoubleUnaryOperator fnOk);
 
-    /**
-     * Apply the mapping function to the error value if this is an Err, otherwise return this
-     * @param fn the function to apply to an error value
-     * @return a new result with the error mapped or this unmodified if this is an ok
-     */
-    default DoubleResult mapErr(Function<AnyError, AnyError> fn) { return this; }
+    @Override default @NotNull DoubleResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return this; }
 
     /**
      * Apply the mapping function to the ok value if this is an Ok, otherwise return this
@@ -176,23 +120,6 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
     <Z> Result<Z> mapToObj(DoubleFunction<Z> fn);
 
     /**
-     * Convert this DoubleResult into a {@link Result<Double>} by boxing the wrapped ok or passing the error unchanged.
-     * @return a Result with this ok double value boxed or the err value unchanged
-     */
-    Result<Double> boxed();
-
-    /**
-     * Apply the supplied predicate to the wrapped error value or return true if this is an ok.
-     * Semantically, {@code return (this instanceof Ok || fn.test(err))}
-     * If you want {@code &&} semantics, use {@link #isErrAnd(Predicate)}
-     * @param fn the predicate to apply to the error value
-     * @return true if this is not an error or the result of applying the predicate to the error value
-     */
-    default boolean filterErr(@NotNull Predicate<AnyError> fn) {
-        return true;
-    }
-
-    /**
      * Apply the supplied predicate to the wrapped ok value or return true if this is an err.
      * Semantically, {@code return (this instanceof Err || fn.test(ok))}
      * If you want {@code &&} semantics, use {@link #isOkAnd(DoublePredicate)}
@@ -204,15 +131,6 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
     }
 
     /**
-     * Apply the supplied predicate to the wrapped error value or return false if this is an ok.
-     * Semantically, {@code return (this instanceof Err && fn.test(err))}
-     * If you want {@code ||} semantics, use {@link #filterErr(Predicate)}
-     * @param fn the predicate to apply to the error value
-     * @return false if this is not an error or the result of applying the predicate to the error value
-     */
-    default boolean isErrAnd(@NotNull Predicate<AnyError> fn) { return false; }
-
-    /**
      * Apply the supplied predicate to the wrapped ok value or return false if this is an error.
      * Semantically, {@code return (this instanceof Ok && fn.test(ok))}
      * If you want {@code ||} semantics, use {@link #filter(DoublePredicate)}
@@ -221,18 +139,7 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
      */
     default boolean isOkAnd(DoublePredicate fn) { return false; }
 
-    /**
-     * Apply the supplied consumer to the wrapped err value, or if this is an ok, perform no operation.
-     * <strong>
-     *     This function is used to achieve side effects.
-     *     You are strongly encouraged to document the side effect if it involves mutating external state.
-     * </strong>
-     * In the most innocuous case, you're writing to a log.
-     * In other cases, you could be modifying a collection, for example,
-     * Collecting a list of errors before filtering them from the pipeline.
-     * @return this, unmodified
-     */
-    default DoubleResult ifErr(Consumer<AnyError> fn) {
+    @Override default @NotNull DoubleResult ifErr(final @NotNull Consumer<AnyError> fn) {
         return this;
     }
 
@@ -326,29 +233,22 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
      */
     void consume(Consumer<AnyError> fnErr, DoubleConsumer fnOk);
 
-    /**
-     * An DoubleResult implementation that wraps an error value, obtained by calling {@link DoubleResult#err(AnyError)}.
-     * To access {@link Err#value}, You should obtain an Err by doing an instanceof check
-     * <pre>{@code
-     * final Result<String> res = ...
-     * if (res instanceof Err e) {
-     *     final AnyError value = e.value();
-     * }
-     * }</pre>
-     */
-    record Err(AnyError value) implements DoubleResult {
+    record Err(AnyError value) implements DoubleResult, AnyErrVariant {
 
         @Override public boolean isErr() { return true; }
 
         public @NonNull String message() { return value.message(); }
         public @NonNull Exception except() { return value.except(); }
         public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
-        public @NonNull AnyError join(final @NonNull AnyError that) { return value.join(that); }
+        public @NonNull Err join(final @NonNull AnyError that) { return err(value.join(that)); }
+        public @NonNull Err withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
+            return err(value.withContext(msgFormat, args));
+        }
 
         public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
-
         public @NonNull IntResult.Err intoInt() { return IntResult.err(value); }
         public @NonNull LongResult.Err intoLong() { return LongResult.err(value); }
+        public @NonNull Err intoDouble() { return this; }
         public @NonNull VoidResult.Err intoVoid() { return VoidResult.err(value); }
 
         @Override public @NotNull AnyError expectErr() { return value; }
@@ -364,13 +264,13 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
         @Override public <Z> Result<Z> mapToObj(DoubleFunction<Z> fn) { return Result.err(value); }
         @Override public Result<Double> boxed() { return Result.err(value); }
 
-        @Override public DoubleResult mapErr(final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
+        @Override public @NotNull DoubleResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
 
         @Override public boolean filterErr(final @NotNull Predicate<AnyError> fn) { return fn.test(value); }
 
         @Override public boolean isErrAnd(@NotNull Predicate<AnyError> fn) { return fn.test(value); }
 
-        @Override public DoubleResult ifErr(final Consumer<AnyError> fn) {
+        @Override public @NonNull DoubleResult ifErr(final @NonNull Consumer<AnyError> fn) {
             fn.accept(value);
             return this;
         }
@@ -494,7 +394,7 @@ public sealed interface DoubleResult extends AnyResult<Double> permits DoubleRes
             return res -> res.flatRecover(fn);
         }
 
-        public static  Consumer<DoubleResult> ifErr(final Consumer<AnyError> fn) {
+        public static Consumer<DoubleResult> ifErr(final Consumer<AnyError> fn) {
             return res -> res.ifErr(fn);
         }
 

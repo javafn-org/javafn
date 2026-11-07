@@ -25,26 +25,15 @@ import java.util.stream.Collector;
  *      .ifErr(ex -> System.err.println("An error occurred: " + ex.message()))
  *      .ifOk(() -> System.out.println("Operation completed successfully"));
  * }</pre>
- * This class is heavily inspired by Rust's Result type
- * <a href="https://doc.rust-lang.org/std/result/">https://doc.rust-lang.org/std/result/</a>.
- * One notable limitation is the lack of the {@code ?} operator.  There's nothing we can do about that.
- * The preferred pattern is to fluently chain operations on the result, however there are times when
- * an escape hatch is absolutely necessary.  Our preferred pattern is this:
- * <pre>{@code
- * {
- *     final VoidResult res = doCompute();
- *     if (res instanceof Err e) {
- *         return res.as(e).into();
- *     }
- * }
- * }</pre>
- * Notice that the result variable is contained within a scope block.  This is not required,
- * but it keeps scope clean.
+ *
+ * The {@link AnyResult#boxed()} method turns any result into the canonical {@link Result} type,
+ * however {@code null} is not a valid value for {@link Result.Ok}.  Instead, VoidResult defines
+ * a {@link Unit} type with a single value {@link Unit#NIL} so that the "boxed" version has a value.
  *
  * @see VoidResult.Err
  * @see VoidResult.Ok
  */
-public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits VoidResult.Err, VoidResult.Ok {
+public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult> permits VoidResult.Err, VoidResult.Ok {
     enum Unit { NIL }
     /**
      * Create a new Result indicating success with no associated value.
@@ -76,57 +65,13 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
      * Collect a stream of {@link VoidResult}s into a {@link ResultBatch}.
      * @return a collector that generates a ResultBatch
      */
-    static  @NonNull Collector<VoidResult, ?, VoidResultBatch> batch() {
+    static @NonNull Collector<VoidResult, ?, VoidResultBatch> batch() {
         return VoidResultBatch.collector();
     }
 
-    /**
-     * Return true if this is an err variant, false otherwise.  This function is useful in a stream pipeline.
-     * More general usage would involve an instanceof check with pattern matching.
-     * @return true iff this is an err variant
-     */
-    default boolean isErr() { return false; }
-
-    /**
-     * Return true if this is an ok variant, false otherwise.
-     * @return true iff this is an ok variant
-     */
-    default boolean isOk() { return false; }
-
-    /**
-     * Drop any variant type information and treat this as a VoidResult.
-     * @return this as a VoidResult rather than an Ok or Err
-     */
-    default VoidResult res() { return this; }
+    @Override default VoidResult res() { return this; }
 
     @Override default Result<Unit> boxed() { return Result.ok(Unit.NIL); }
-
-    /**
-     * Unsafe operation, only safe in a branch opposite a test against ok
-     * or inside a branch that checked {@link #isErr()}.
-     * Access the error value or throw an exception.
-     * <pre>{@code
-     * final Result<String> res = ...;
-     * if (res instanceof Ok<?> o) {
-     *     ... // do something with ok
-     * } else {
-     *     AnyError e = res.expectErr();
-     * }
-     * }</pre>
-     * @return the error value in this Result
-     * @throws IllegalStateException if this Result is not actually an Err
-     */
-    default @NonNull AnyError expectErr() {
-        throw new IllegalStateException("Expected Result to be an Err instance, but it was not");
-    }
-
-    /**
-     * Get the non-null error value of this result wrapped in an optional, or an empty optional if this result
-     * is not an err or the wrapped err value is null.
-     */
-    default @NonNull Optional<AnyError> optErr() {
-        return Optional.empty();
-    }
 
     /**
      * Perform the appropriate mapping operation on this Result.
@@ -137,12 +82,7 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
      */
     <NEWOK> @NonNull Result<NEWOK> map(@NonNull Function<AnyError, AnyError> fnErr, @NonNull Supplier<NEWOK> fnOk);
 
-    /**
-     * Apply the mapping function to the error value if this is an Err, otherwise return this
-     * @param fn the function to apply to an error value
-     * @return a new result with the error mapped or this unmodified if this is an ok
-     */
-    default @NonNull VoidResult mapErr(@NonNull Function<AnyError, AnyError> fn) {
+    @Override default @NonNull VoidResult mapErr(@NonNull Function<AnyError, AnyError> fn) {
         return this;
     }
 
@@ -158,17 +98,6 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
     @NonNull DoubleResult mapToDouble(@NonNull DoubleSupplier fn);
 
     /**
-     * Apply the supplied predicate to the wrapped error value or return true if this is an ok.
-     * Semantically, {@code return (this instanceof Ok || fn.test(err))}
-     * If you want {@code &&} semantics, use {@link #isErrAnd(Predicate)}
-     * @param fn the predicate to apply to the error value
-     * @return true if this is not an error or the result of applying the predicate to the error value
-     */
-    default boolean filterErr(@NonNull Predicate<AnyError> fn) {
-        return true;
-    }
-
-    /**
      * Apply the supplied predicate to the wrapped ok value or return true if this is an err.
      * Semantically, {@code return (this instanceof Err || fn.getAsBoolean)}
      * If you want {@code &&} semantics, use {@link #isOkAnd(BooleanSupplier)}
@@ -180,15 +109,6 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
     }
 
     /**
-     * Apply the supplied predicate to the wrapped error value or return false if this is an ok.
-     * Semantically, {@code return (this instanceof Err && fn.test(err))}
-     * If you want {@code ||} semantics, use {@link #filterErr(Predicate)}
-     * @param fn the predicate to apply to the error value
-     * @return false if this is not an error or the result of applying the predicate to the error value
-     */
-    default boolean isErrAnd(@NonNull Predicate<AnyError> fn) { return false; }
-
-    /**
      * Apply the supplied predicate to the wrapped ok value or return false if this is an error.
      * Semantically, {@code return (this instanceof Ok && fn.getAsBoolean())}
      * If you want {@code ||} semantics, use {@link #filter(BooleanSupplier)}
@@ -197,18 +117,7 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
      */
     default boolean isOkAnd(@NonNull BooleanSupplier fn) { return false; }
 
-    /**
-     * Apply the supplied consumer to the wrapped err value, or if this is an ok, perform no operation.
-     * <strong>
-     *     This function is used to achieve side effects.
-     *     You are strongly encouraged to document the side effect if it involves mutating external state.
-     * </strong>
-     * In the most innocuous case, you're writing to a log.
-     * In other cases, you could be modifying a collection, for example,
-     * Collecting a list of errors before filtering them from the pipeline.
-     * @return this, unmodified
-     */
-    default @NonNull VoidResult ifErr(@NonNull Consumer<AnyError> fn) {
+    @Override default @NonNull VoidResult ifErr(@NonNull Consumer<AnyError> fn) {
         return this;
     }
 
@@ -296,17 +205,7 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
      */
     void consume(Consumer<AnyError> fnErr, Runnable fnOk);
 
-    /**
-     * A Result implementation that wraps an error value, obtained by calling {@link VoidResult#err(AnyError)}.
-     * To access {@link Err#value}, You should obtain an Err by doing an instanceof check
-     * <pre>{@code
-     * final Result<String> res = ...
-     * if (res instanceof Err<?> e) {
-     *     final AnyError value = e.value();
-     * }
-     * }</pre>
-     */
-    record Err(@NonNull AnyError value) implements VoidResult {
+    record Err(@NonNull AnyError value) implements VoidResult, AnyErrVariant {
 
         @Override public boolean isErr() { return true; }
 
@@ -315,26 +214,11 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
         public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
         public @NonNull AnyError join(final @NonNull AnyError that) { return value.join(that); }
 
-        /**
-         * Coerce the OK type to a new type and return this otherwise unmodified.
-         * This function is not defined on Result.  You should obtain an Err by doing an instanceof check
-         * <pre>{@code
-         * public Result<Foo> demoFunction() {
-         *     final Result<Bar> res = someOperation();
-         *     if (res instanceof Err<?, ?> e) {
-         *         return e.into();
-         *     }
-         *     final Bar bar = res.expectOk();
-         * }
-         * }</pre>
-         *
-         * @return this Err with the OK type coerced to a new type
-         */
         public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
-
-        public @NonNull IntResult intoInt() { return IntResult.err(value); }
-        public @NonNull LongResult intoLong() { return LongResult.err(value); }
-        public @NonNull DoubleResult intoDouble() { return DoubleResult.err(value); }
+        public @NonNull IntResult.Err intoInt() { return IntResult.err(value); }
+        public @NonNull LongResult.Err intoLong() { return LongResult.err(value); }
+        public @NonNull DoubleResult.Err intoDouble() { return DoubleResult.err(value); }
+        public @NonNull VoidResult.Err intoVoid() { return this; }
 
         @Override public @NonNull AnyError expectErr() { return value; }
 
@@ -348,6 +232,7 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
         @Override public @NonNull IntResult mapToInt(@NonNull final IntSupplier fn) { return IntResult.err(value); }
         @Override public @NonNull LongResult mapToLong(@NonNull final LongSupplier fn) { return LongResult.err(value); }
         @Override public @NonNull DoubleResult mapToDouble(@NonNull final DoubleSupplier fn) { return DoubleResult.err(value); }
+        @Override public Result<Unit> boxed() { return Result.err(value); }
 
         @Override public @NonNull VoidResult mapErr(@NonNull final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
 
@@ -380,9 +265,6 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits Vo
         }
     }
 
-    /**
-     * A VoidResult implementation that carries no value.
-     */
     record Ok() implements VoidResult {
 
         @Override public boolean isOk() { return true; }
