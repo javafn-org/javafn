@@ -44,7 +44,8 @@ import java.util.stream.Collector;
  * @see VoidResult.Err
  * @see VoidResult.Ok
  */
-public sealed interface VoidResult extends AnyResult permits VoidResult.Err, VoidResult.Ok {
+public sealed interface VoidResult extends AnyResult<VoidResult.Unit> permits VoidResult.Err, VoidResult.Ok {
+    enum Unit { NIL }
     /**
      * Create a new Result indicating success with no associated value.
      */
@@ -91,6 +92,14 @@ public sealed interface VoidResult extends AnyResult permits VoidResult.Err, Voi
      * @return true iff this is an ok variant
      */
     default boolean isOk() { return false; }
+
+    /**
+     * Drop any variant type information and treat this as a VoidResult.
+     * @return this as a VoidResult rather than an Ok or Err
+     */
+    default VoidResult res() { return this; }
+
+    @Override default Result<Unit> boxed() { return Result.ok(Unit.NIL); }
 
     /**
      * Unsafe operation, only safe in a branch opposite a test against ok

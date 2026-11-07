@@ -59,7 +59,7 @@ import java.util.stream.Collector;
  * @see Result.Err
  * @see Result.Ok
  */
-public sealed interface Result<OK> extends AnyResult permits Result.Err, Result.Ok {
+public sealed interface Result<OK> extends AnyResult<OK> permits Result.Err, Result.Ok {
      /** Create a new Ok Result wrapping a successful non-null value. */
     static <OK> @NonNull Ok<OK> ok(@NonNull final OK ok) {
         return new Ok<>(Objects.requireNonNull(ok));
@@ -114,6 +114,8 @@ public sealed interface Result<OK> extends AnyResult permits Result.Err, Result.
      * @return this as a Result rather than an Ok or Err
      */
     default Result<OK> res() { return this; }
+
+    default Result<OK> boxed() { return this; }
 
     /**
      * Collect a stream of {@link Result}s into a {@link ResultBatch}.

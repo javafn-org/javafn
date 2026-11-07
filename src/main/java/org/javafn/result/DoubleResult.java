@@ -21,14 +21,14 @@ import java.util.function.ToDoubleFunction;
 import java.util.stream.Collector;
 import java.util.stream.DoubleStream;
 
-public sealed interface DoubleResult extends AnyResult permits DoubleResult.Err, DoubleResult.Ok {
+public sealed interface DoubleResult extends AnyResult<Double> permits DoubleResult.Err, DoubleResult.Ok {
     /** Create a new Result wrapping a successful integer value. */
     static Ok ok(final double ok) {
         return new DoubleResult.Ok(ok);
     }
     /**
-     * Create a new IntResult wrapping a successful value, dropping type information
-     * so that the return value is an IntResult, not an Ok.
+     * Create a new DoubleResult wrapping a successful value, dropping type information
+     * so that the return value is an DoubleResult, not an Ok.
      * see {@link #res()}
      */
     static @NonNull DoubleResult okRes(final double ok) {

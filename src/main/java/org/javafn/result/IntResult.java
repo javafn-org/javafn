@@ -21,7 +21,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collector;
 import java.util.stream.IntStream;
 
-public sealed interface IntResult extends AnyResult permits IntResult.Err, IntResult.Ok {
+public sealed interface IntResult extends AnyResult<Integer> permits IntResult.Err, IntResult.Ok {
      /** Create a new Result wrapping a successful integer value. */
     static Ok ok(final int ok) {
         return new Ok(ok);

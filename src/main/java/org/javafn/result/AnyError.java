@@ -66,10 +66,10 @@ public interface AnyError {
 
 	/* *******************************************************************************/
 
-	static @NonNull VoidResult fold(@NonNull final AnyResult... results) {
+	static @NonNull VoidResult fold(@NonNull final AnyResult<?>... results) {
 		return fold(Arrays.asList(results));
 	}
-	static @NonNull VoidResult fold(@NonNull final List<AnyResult> results) {
+	static @NonNull VoidResult fold(@NonNull final List<AnyResult<?>> results) {
 		return results.stream()
 				.filter(AnyResult::isErr)
 				.map(AnyResult::expectErr)

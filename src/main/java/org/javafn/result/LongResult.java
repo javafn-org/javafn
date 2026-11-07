@@ -21,14 +21,14 @@ import java.util.function.ToLongFunction;
 import java.util.stream.Collector;
 import java.util.stream.LongStream;
 
-public sealed interface LongResult extends AnyResult permits LongResult.Err, LongResult.Ok {
+public sealed interface LongResult extends AnyResult<Long> permits LongResult.Err, LongResult.Ok {
     /** Create a new Result wrapping a successful integer value. */
     static Ok ok(final long ok) {
         return new LongResult.Ok(ok);
     }
     /**
-     * Create a new IntResult wrapping a successful value, dropping type information
-     * so that the return value is an IntResult, not an Ok.
+     * Create a new LongResult wrapping a successful value, dropping type information
+     * so that the return value is an LongResult, not an Ok.
      * see {@link #res()}
      */
     static @NonNull LongResult okRes(final long ok) {
