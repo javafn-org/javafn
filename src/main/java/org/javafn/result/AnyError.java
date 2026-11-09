@@ -149,6 +149,9 @@ public interface AnyError {
 		final Class<E> type = (Class<E>) e.getClass();
 		return new EnumError<>(e, type, Optional.ofNullable(msgDetails));
 	}
+	static @NonNull AnyError joined(@NonNull final AnyError... errors) {
+		return new ErrorList(List.of(errors));
+	}
 	static @NonNull AnyError joined(@NonNull final List<AnyError> errors) {
 		return new ErrorList(errors);
 	}

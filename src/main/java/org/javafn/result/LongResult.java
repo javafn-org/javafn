@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.function.Consumer;
+import java.util.function.DoubleFunction;
 import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongFunction;
@@ -110,14 +111,9 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
      * @return a new result with the ok mapped or this unmodified if this is an err
      */
     default LongResult map(final LongUnaryOperator fn) { return this; }
-
+    <Z> Result<Z> mapToObj(LongFunction<Z> fn);
     IntResult mapToInt(LongToIntFunction fn);
     DoubleResult mapToDouble(LongToDoubleFunction fn);
-    /**
-     * Convert this LongResult into a {@link Result<Z>} by calling the supplied mapping function.
-     * @return a Result with this ok long value mapped to an object or the err value unchanged
-     */
-    <Z> Result<Z> mapToObj(LongFunction<Z> fn);
 
     /**
      * Apply the supplied predicate to the wrapped ok value or return true if this is an err.
@@ -216,6 +212,10 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
      * @return this, if this Result is already an Err, otherwise, the result of applying the function to the ok value
      */
     LongResult flatMap(LongFunction<LongResult> fn);
+    @NonNull <Z> Result<Z> flatMapToObj(@NonNull LongFunction<Result<Z>> fn);
+    @NonNull IntResult flatMapToInt(@NonNull LongFunction<IntResult> fn);
+    @NonNull DoubleResult flatMapToDouble(@NonNull LongFunction<DoubleResult> fn);
+    @NonNull VoidResult flatMapToVoid(@NonNull LongFunction<VoidResult> fn);
 
     /**
      * Apply the appropriate mapping function and return the resulting value.
@@ -259,9 +259,9 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
             return err(fnErr.apply(value));
         }
 
+        @Override public <Z> Result<Z> mapToObj(LongFunction<Z> fn) { return Result.err(value); }
         @Override public IntResult mapToInt(LongToIntFunction fn) { return IntResult.err(value); }
         @Override public DoubleResult mapToDouble(LongToDoubleFunction fn) { return DoubleResult.err(value); }
-        @Override public <Z> Result<Z> mapToObj(LongFunction<Z> fn) { return Result.err(value); }
         @Override public Result<Long> boxed() { return Result.err(value); }
 
         @Override public @NotNull LongResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
@@ -283,6 +283,11 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
         }
 
         @Override public LongResult flatMap(final LongFunction<LongResult> fn) { return this; }
+        @Override public @NonNull <Z> Result<Z> flatMapToObj(@NonNull LongFunction<Result<Z>> fn) { return into(); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull LongFunction<IntResult> fn) { return intoInt(); }
+        @Override public @NonNull DoubleResult flatMapToDouble(@NonNull LongFunction<DoubleResult> fn) { return intoDouble(); }
+        @Override public @NonNull VoidResult flatMapToVoid(@NonNull LongFunction<VoidResult> fn) { return intoVoid(); }
+
         @Override public LongResult flatRecover(final Function<AnyError, LongResult> fn) {
             return fn.apply(value);
         }
@@ -337,9 +342,9 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
         }
 
         @Override public LongResult map(final LongUnaryOperator fn) { return ok(fn.applyAsLong(value)); }
+        @Override public <Z> Result<Z> mapToObj(LongFunction<Z> fn) { return Result.ok(fn.apply(value)); }
         @Override public IntResult mapToInt(LongToIntFunction fn) { return IntResult.ok(fn.applyAsInt(value)); }
         @Override public DoubleResult mapToDouble(LongToDoubleFunction fn) { return DoubleResult.ok(fn.applyAsDouble(value)); }
-        @Override public <Z> Result<Z> mapToObj(LongFunction<Z> fn) { return Result.ok(fn.apply(value)); }
         @Override public Result<Long> boxed() { return Result.ok(value); }
 
         @Override public boolean filter(final LongPredicate fn) { return fn.test(value); }
@@ -362,6 +367,10 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
             return this;
         }
         @Override public LongResult flatMap(final LongFunction<LongResult> fn) { return fn.apply(value); }
+        @Override public @NonNull <Z> Result<Z> flatMapToObj(@NonNull LongFunction<Result<Z>> fn) { return fn.apply(value); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull LongFunction<IntResult> fn) { return fn.apply(value); }
+        @Override public @NonNull DoubleResult flatMapToDouble(@NonNull LongFunction<DoubleResult> fn) { return fn.apply(value); }
+        @Override public @NonNull VoidResult flatMapToVoid(@NonNull LongFunction<VoidResult> fn) { return fn.apply(value); }
 
         @Override public <Z> Z reduce(final Function<AnyError, Z> fnErr, final LongFunction<Z> fnOk) {
             return fnOk.apply(value);
@@ -422,6 +431,18 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
 
         public static Function<LongResult, LongResult> flatMap(final LongFunction<LongResult> fn) {
             return res -> res.flatMap(fn);
+        }
+        public static <Z> @NonNull Function<LongResult, Result<Z>> flatMapToObj(@NonNull LongFunction<Result<Z>> fn) {
+            return res -> res.flatMapToObj(fn);
+        }
+        public static @NonNull Function<LongResult, IntResult> flatMapToInt(@NonNull LongFunction<IntResult> fn) {
+            return res -> res.flatMapToInt(fn);
+        }
+        public static @NonNull Function<LongResult, DoubleResult> flatMapToDouble(@NonNull LongFunction<DoubleResult> fn) {
+            return res -> res.flatMapToDouble(fn);
+        }
+        public static @NonNull Function<LongResult, VoidResult> flatMapToVoid(@NonNull LongFunction<VoidResult> fn) {
+            return res -> res.flatMapToVoid(fn);
         }
 
         public static  Consumer<LongResult> ifOk(final LongConsumer fn) {

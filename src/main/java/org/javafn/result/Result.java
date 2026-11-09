@@ -291,6 +291,12 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
      */
     <NEWOK> @NonNull Result<NEWOK> flatMap(@NonNull Function<OK, Result<NEWOK>> fn);
 
+    @NonNull IntResult flatMapToInt(@NonNull Function<OK, IntResult> fn);
+    @NonNull LongResult flatMapToLong(@NonNull Function<OK, LongResult> fn);
+    @NonNull DoubleResult flatMapToDouble(@NonNull Function<OK, DoubleResult> fn);
+    @NonNull VoidResult flatMapToVoid(@NonNull Function<OK, VoidResult> fn);
+
+
     /**
      * Apply the appropriate mapping function and return the resulting value.
      * @param fnErr the function to apply if this is an Err
@@ -360,6 +366,11 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
         }
 
         @Override public <Z> @NonNull Result<Z> flatMap(@NonNull final Function<OK, Result<Z>> fn) { return into(); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull Function<OK, IntResult> fn) { return intoInt(); }
+        @Override public @NonNull LongResult flatMapToLong(@NonNull Function<OK, LongResult> fn) { return intoLong(); }
+        @Override public @NonNull DoubleResult flatMapToDouble(@NonNull Function<OK, DoubleResult> fn) { return intoDouble(); }
+        @Override public @NonNull VoidResult flatMapToVoid(@NonNull Function<OK, VoidResult> fn) { return intoVoid(); }
+
         @Override public @NonNull Result<OK> flatRecover(@NonNull final Function<AnyError, Result<OK>> fn) {
             return fn.apply(value);
         }
@@ -450,6 +461,11 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
 
         @Override public @NonNull Result<OK> flatRecover(@NonNull final Function<AnyError, Result<OK>> fn) { return this; }
         @Override public <Z> @NonNull Result<Z> flatMap(@NonNull final Function<OK, Result<Z>> fn) { return fn.apply(value); }
+
+        @Override public @NonNull IntResult flatMapToInt(@NonNull Function<OK, IntResult> fn) { return fn.apply(value); }
+        @Override public @NonNull LongResult flatMapToLong(@NonNull Function<OK, LongResult> fn) { return fn.apply(value); }
+        @Override public @NonNull DoubleResult flatMapToDouble(@NonNull Function<OK, DoubleResult> fn) { return fn.apply(value); }
+        @Override public @NonNull VoidResult flatMapToVoid(@NonNull Function<OK, VoidResult> fn) { return fn.apply(value); }
 
         @Override public <Z> Z reduce(@NonNull final Function<AnyError, Z> fnErr, @NonNull final Function<OK, Z> fnOk) {
             return fnOk.apply(value);
@@ -561,6 +577,18 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
 
         public static <OK, Z> @NonNull Function<Result<OK>, Result<Z>> flatMap(@NonNull final Function<OK, Result<Z>> fn) {
             return res -> res.flatMap(fn);
+        }
+        public static <OK> @NonNull Function<Result<OK>, IntResult> flatMapToInt(@NonNull Function<OK, IntResult> fn) {
+            return res -> res.flatMapToInt(fn);
+        }
+        public static <OK> @NonNull Function<Result<OK>, LongResult> flatMapToLong(@NonNull Function<OK, LongResult> fn) {
+            return res -> res.flatMapToLong(fn);
+        }
+        public static <OK> @NonNull Function<Result<OK>, DoubleResult> flatMapToDouble(@NonNull Function<OK, DoubleResult> fn) {
+            return res -> res.flatMapToDouble(fn);
+        }
+        public static <OK> @NonNull Function<Result<OK>, VoidResult> flatMapToVoid(@NonNull Function<OK, VoidResult> fn) {
+            return res -> res.flatMapToVoid(fn);
         }
 
         public static <OK> @NonNull Consumer<Result<OK>> ifOk(@NonNull final Consumer<OK> fn) {

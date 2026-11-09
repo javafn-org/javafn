@@ -16,6 +16,7 @@ import java.util.function.DoubleToIntFunction;
 import java.util.function.DoubleToLongFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collector;
@@ -216,6 +217,10 @@ public sealed interface DoubleResult extends AnyResult<Double, DoubleResult> per
      * @return this, if this Result is already an Err, otherwise, the result of applying the function to the ok value
      */
     DoubleResult flatMap(DoubleFunction<DoubleResult> fn);
+    @NonNull <Z> Result<Z> flatMapToObj(@NonNull DoubleFunction<Result<Z>> fn);
+    @NonNull IntResult flatMapToInt(@NonNull DoubleFunction<IntResult> fn);
+    @NonNull LongResult flatMapToLong(@NonNull DoubleFunction<LongResult> fn);
+    @NonNull VoidResult flatMapToVoid(@NonNull DoubleFunction<VoidResult> fn);
 
     /**
      * Apply the appropriate mapping function and return the resulting value.
@@ -283,6 +288,11 @@ public sealed interface DoubleResult extends AnyResult<Double, DoubleResult> per
         }
 
         @Override public DoubleResult flatMap(final DoubleFunction<DoubleResult> fn) { return this; }
+        @Override public @NonNull <Z> Result<Z> flatMapToObj(@NonNull DoubleFunction<Result<Z>> fn) { return into(); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull DoubleFunction<IntResult> fn) { return intoInt(); }
+        @Override public @NonNull LongResult flatMapToLong(@NonNull DoubleFunction<LongResult> fn) { return intoLong(); }
+        @Override public @NonNull VoidResult flatMapToVoid(@NonNull DoubleFunction<VoidResult> fn) { return intoVoid(); }
+
         @Override public DoubleResult flatRecover(final Function<AnyError, DoubleResult> fn) {
             return fn.apply(value);
         }
@@ -362,6 +372,10 @@ public sealed interface DoubleResult extends AnyResult<Double, DoubleResult> per
             return this;
         }
         @Override public DoubleResult flatMap(final DoubleFunction<DoubleResult> fn) { return fn.apply(value); }
+        @Override public @NonNull <Z> Result<Z> flatMapToObj(@NonNull DoubleFunction<Result<Z>> fn) { return fn.apply(value); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull DoubleFunction<IntResult> fn) { return fn.apply(value); }
+        @Override public @NonNull LongResult flatMapToLong(@NonNull DoubleFunction<LongResult> fn) { return fn.apply(value); }
+        @Override public @NonNull VoidResult flatMapToVoid(@NonNull DoubleFunction<VoidResult> fn) { return fn.apply(value); }
 
         @Override public <Z> Z reduce(final Function<AnyError, Z> fnErr, final DoubleFunction<Z> fnOk) {
             return fnOk.apply(value);
@@ -422,6 +436,18 @@ public sealed interface DoubleResult extends AnyResult<Double, DoubleResult> per
 
         public static Function<DoubleResult, DoubleResult> flatMap(final DoubleFunction<DoubleResult> fn) {
             return res -> res.flatMap(fn);
+        }
+        public static <Z> @NonNull Function<DoubleResult, Result<Z>> flatMapToObj(@NonNull DoubleFunction<Result<Z>> fn) {
+            return res -> res.flatMapToObj(fn);
+        }
+        public static @NonNull Function<DoubleResult, IntResult> flatMapToInt(@NonNull DoubleFunction<IntResult> fn) {
+            return res -> res.flatMapToInt(fn);
+        }
+        public static @NonNull Function<DoubleResult, LongResult> flatMapToLong(@NonNull DoubleFunction<LongResult> fn) {
+            return res -> res.flatMapToLong(fn);
+        }
+        public static @NonNull Function<DoubleResult, VoidResult> flatMapToVoid(@NonNull DoubleFunction<VoidResult> fn) {
+            return res -> res.flatMapToVoid(fn);
         }
 
         public static  Consumer<DoubleResult> ifOk(final DoubleConsumer fn) {

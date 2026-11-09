@@ -171,23 +171,12 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
     @NonNull
     VoidResult flatRecover(@NonNull Function<AnyError, VoidResult> fn);
 
-    /**
-     * Apply the supplied mapping function, which itself returns a Result, to this Result's ok value if it is an ok.
-     * If the mapping function returns an Err, turn this into an Err rather than an <pre>{@code Ok<Err<o>>}</pre>.
-     * In other words, if the supplied mapping function would result in
-     * <pre>{@code
-     * Result<Result<Foo>> res2 = res1.mapOk(...);
-     * }</pre>
-     * this function "flattens" it to
-     * <pre>{@code
-     * Result<Foo> res2 = res1.flatMap(...);
-     * }</pre>
-     * Comparable to {@link #flatRecover(Function)}, except calling the function on the Ok value and returning a flat Result.
-     * @param fn a function that returns a result with the same error type as this Result
-     * @return this, if this Result is already an Err, otherwise, the result of applying the function to the ok value
-     * @param <NEWOK> the type of the ok after mapping
-     */
-    <NEWOK> @NonNull Result<NEWOK> flatMap(@NonNull Supplier<Result<NEWOK>> fn);
+    @NonNull VoidResult flatMap(@NonNull Supplier<VoidResult> fn);
+    <NEWOK> @NonNull Result<NEWOK> flatMapToObj(@NonNull Supplier<Result<NEWOK>> fn);
+
+    @NonNull IntResult flatMapToInt(@NonNull Supplier<IntResult> fn);
+    @NonNull LongResult flatMapToLong(@NonNull Supplier<LongResult> fn);
+    @NonNull DoubleResult flatMapToDouble(@NonNull Supplier<DoubleResult> fn);
 
     /**
      * Apply the appropriate mapping function and return the resulting value.
@@ -252,7 +241,12 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
             return this;
         }
 
-        @Override public <Z> @NonNull Result<Z> flatMap(@NonNull final Supplier<Result<Z>> fn) { return into(); }
+        @Override public @NonNull VoidResult flatMap(@NonNull final Supplier<VoidResult> fn) { return this; }
+        @Override public <NEWOK> @NonNull Result<NEWOK> flatMapToObj(@NonNull Supplier<Result<NEWOK>> fn) { return into(); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull Supplier<IntResult> fn) { return intoInt(); }
+        @Override public @NonNull LongResult flatMapToLong(@NonNull Supplier<LongResult> fn) { return intoLong(); }
+        @Override public @NonNull DoubleResult flatMapToDouble(@NonNull Supplier<DoubleResult> fn) { return intoDouble(); }
+
         @Override public  @NonNull VoidResult flatRecover(@NonNull final Function<AnyError, VoidResult> fn) {
             return fn.apply(value);
         }
@@ -297,7 +291,11 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
         @Override public @NonNull VoidResult flatRecover(@NonNull final Function<AnyError, VoidResult> fn) {
             return this;
         }
-        @Override public <Z> @NonNull Result<Z> flatMap(@NonNull final Supplier<Result<Z>> fn) { return fn.get(); }
+        @Override public @NonNull VoidResult flatMap(@NonNull final Supplier<VoidResult> fn) { return fn.get(); }
+        @Override public <NEWOK> @NonNull Result<NEWOK> flatMapToObj(@NonNull Supplier<Result<NEWOK>> fn) { return fn.get(); }
+        @Override public @NonNull IntResult flatMapToInt(@NonNull Supplier<IntResult> fn) { return fn.get(); }
+        @Override public @NonNull LongResult flatMapToLong(@NonNull Supplier<LongResult> fn) { return fn.get(); }
+        @Override public @NonNull DoubleResult flatMapToDouble(@NonNull Supplier<DoubleResult> fn) { return fn.get(); }
 
         @Override public <Z> @Nullable Z reduce(@NonNull final Function<AnyError, Z> fnErr, @NonNull final Supplier<Z> fnOk) {
             return fnOk.get();
@@ -399,20 +397,32 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
             return res -> res.failIf(testFn, mapFn);
         }
 
-        public static <Z> @NonNull Function<VoidResult, Result<Z>> flatMap(@NonNull final Supplier<Result<Z>> fn) {
+        public static @NonNull Function<VoidResult, VoidResult> flatMap(@NonNull final Supplier<VoidResult> fn) {
             return res -> res.flatMap(fn);
         }
+        public static <Z> @NonNull Function<VoidResult, Result<Z>> flatMapToObj(@NonNull final Supplier<Result<Z>> fn) {
+            return res -> res.flatMapToObj(fn);
+        }
+        public static @NonNull Function<VoidResult, IntResult> flatMapToInt(@NonNull final Supplier<IntResult> fn) {
+            return res -> res.flatMapToInt(fn);
+        }
+        public static @NonNull Function<VoidResult, LongResult> flatMapToLong(@NonNull final Supplier<LongResult> fn) {
+            return res -> res.flatMapToLong(fn);
+        }
+        public static @NonNull Function<VoidResult, DoubleResult> flatMapToDouble(@NonNull final Supplier<DoubleResult> fn) {
+            return res -> res.flatMapToDouble(fn);
+        }
 
-        public static  @NonNull Consumer<VoidResult> ifOk(@NonNull final Runnable fn) {
+        public static @NonNull Consumer<VoidResult> ifOk(@NonNull final Runnable fn) {
             return res -> res.ifOk(fn);
         }
-        public static  @NonNull Function<VoidResult, IntResult> mapToInt(@NonNull IntSupplier fn) {
+        public static @NonNull Function<VoidResult, IntResult> mapToInt(@NonNull IntSupplier fn) {
             return res -> res.mapToInt(fn);
         }
-        public static  @NonNull Function<VoidResult, LongResult> mapToLong(@NonNull LongSupplier fn) {
+        public static @NonNull Function<VoidResult, LongResult> mapToLong(@NonNull LongSupplier fn) {
             return res -> res.mapToLong(fn);
         }
-        public static  @NonNull Function<VoidResult, DoubleResult> mapToDouble(@NonNull DoubleSupplier fn) {
+        public static @NonNull Function<VoidResult, DoubleResult> mapToDouble(@NonNull DoubleSupplier fn) {
             return res -> res.mapToDouble(fn);
         }
 
