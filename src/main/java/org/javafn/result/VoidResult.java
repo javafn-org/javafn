@@ -2,6 +2,7 @@ package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import org.intellij.lang.annotations.PrintFormat;
 import org.javafn.utils.Expect;
 
 import java.util.List;
@@ -48,16 +49,21 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
     static  @NonNull Err err(@NonNull final String errorMessage) {
         return new Err(AnyError.from(errorMessage));
     }
+    static @NonNull Err err(@NonNull @PrintFormat final String errorMessage, final Object... args) {
+        return new Err(AnyError.from(errorMessage, args));
+    }
     /** Create a new Result wrapping a list of error messages. */
     static  @NonNull Err err(@NonNull final List<String> errorMessages) {
         return new Err(AnyError.from(errorMessages));
     }
     /** Create a new Result wrapping an exception. */
     static <E extends Exception> @NonNull Err err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    @Deprecated(forRemoval = true)
     static <E extends Exception> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
     static <E extends Enum<E>> @NonNull Err err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    @Deprecated(forRemoval = true)
     static <E extends Enum<E>> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }

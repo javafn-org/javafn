@@ -53,10 +53,12 @@ public sealed interface DoubleResult extends AnyResult<Double, DoubleResult> per
     }
     /** Create a new DoubleResult wrapping an exception. */
     static <E extends Exception> @NonNull Err err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    @Deprecated(forRemoval = true)
     static <E extends Exception> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
     static <E extends Enum<E>> @NonNull Err err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    @Deprecated(forRemoval = true)
     static <E extends Enum<E>> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }

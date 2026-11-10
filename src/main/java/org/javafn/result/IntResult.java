@@ -52,10 +52,12 @@ public sealed interface IntResult extends AnyResult<Integer, IntResult> permits 
     }
     /** Create a new IntResult wrapping an exception. */
     static <E extends Exception> @NonNull Err err(@NonNull final E e) {return new Err(AnyError.from(e));}
+    @Deprecated(forRemoval = true)
     static <E extends Exception> @NonNull Err err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
     static <E extends Enum<E>> @NonNull Err err(@NonNull final E e) { return new Err(AnyError.from(e)); }
+    @Deprecated(forRemoval = true)
     static <E extends Enum<E>> @NonNull IntResult err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err(AnyError.from(e, errorMessage));
     }
