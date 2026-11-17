@@ -6,10 +6,10 @@ public class DomainTypes {
 
     public static class Foo {
         public Foo() {}
-        public Foo(final String ignored) {}
+        public Foo(final Object... ignored) {}
         public void doFooThings() {}
         public Foo updateState() { return this; }
-        public Bar safeBarGenerate(final String ignored) { return new Bar(); }
+        public Bar safeBarGenerate(final Object... ignored) { return new Bar(); }
         public boolean isStateValid() { return true; }
         public Closeable open() { return () -> {}; }
         public String name() { return ""; }

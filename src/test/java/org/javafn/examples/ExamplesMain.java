@@ -6,6 +6,7 @@ import org.javafn.examples.DomainTypes.HttpResponse;
 import org.javafn.result.AnyError;
 import org.javafn.either.Either;
 import org.javafn.result.IntResult;
+import org.javafn.result.IntResultBatch;
 import org.javafn.result.LongResult;
 import org.javafn.result.Result;
 import org.javafn.result.Result.Oks;
@@ -17,6 +18,7 @@ import org.javafn.utils.Expect;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -34,7 +36,16 @@ public class ExamplesMain {
 
     private static final Random RAND = new Random();
 
-    public enum DomainError { INVALID_INPUT, FOO_NOT_FOUND, RANDOM_ERROR }
+    public enum DomainError { INVALID_INPUT, FOO_NOT_FOUND, RANDOM_ERROR
+        ;
+        public void doDomainSpecificLogging() {}
+    }
+
+    public static class DomainResource {
+        public Foo readFoo(Object... args) { return new Foo(); }
+        public void close() {}
+        public void flush() {}
+    }
 
     public static Result<Foo> doWork() {
         return Result.ok(new Foo());
@@ -305,26 +316,28 @@ public class ExamplesMain {
     }
 
     public static void tryUsage() {
+        final DomainResource resource = new DomainResource();
         // snips-start: try_usage
-        // Single value
         final Result<Integer> parsed = Try.toGet(
                 () -> Integer.parseInt("42"));   // Ok(42)
         final Result<Integer> bad = Try.toGet(
                 () -> Integer.parseInt("zzz"));  // Err
+        final Result<Bar> maybeBar = Try.toGet(resource::readFoo)
+                .map(Foo::safeBarGenerate);
 
         // Primitive supplier
-        final IntResult parsedInt = Try.toGetInt(() -> Integer.parseInt("42"));
+        final IntResult parsedInt = Try.toGetInt(
+                () -> Integer.parseInt("42"));
 
         // Runnable that might throw -> VoidResult
-        final VoidResult flushed = Try.to(
-                () -> System.out.println("flushed"));
+        final VoidResult maybeFlushed = Try.to(resource::flush);
 
         // In streams
         final List<String> numbers = List.of("1", "2", "zzz", "4");
 
-        final List<IntResult> results = numbers.stream()
+        final IntResultBatch results = numbers.stream()
             .map(Try.toMapToInt(Integer::parseInt))
-            .toList();
+            .collect(IntResult.batch());
         // snips-end: try_usage
     }
 
@@ -427,18 +440,31 @@ public class ExamplesMain {
         // Err conversions preserve the error
         final IntResult.Err err = IntResult.err("bad");
         final LongResult longErr = err.intoLong();
+        if (!(longErr instanceof LongResult.Err asErr
+                && "bad".equals(asErr.value().message()))) {
+            throw new AssertionError();
+        }
         // snips-end: int_result
     }
 
     public static void voidResult() {
+        final DomainResource resource = new DomainResource();
+        final File resourceFile = new File("");
+
         // snips-start: void_result
-        final VoidResult vr = VoidResult.ok();
-        vr.ifOk(() -> System.out.println("done"));
-        vr.ifErr(e -> System.err.println(e.message()));
+        final VoidResult resResourceClose = Try.to(resource::close);
+
+        resResourceClose.ifOk(() -> System.out.println("Success"));
+        resResourceClose.ifErr(e -> System.err.println("Failed to close resource: " + e.message()));
+        // equivalently:
+        resResourceClose.consume(
+                err -> System.err.println("Failed to close resource: " + err.message()),
+                () -> System.out.println("Success"));
 
         // failIf on VoidResult uses BooleanSupplier / Supplier<AnyError>
-        final VoidResult checked = VoidResult.ok()
-            .failIf(() -> false, () -> AnyError.from("condition failed"));
+        final VoidResult checked = resResourceClose
+            .failIf(resourceFile::exists,
+                    () -> AnyError.from("Close should have deleted the file"));
         // snips-end: void_result
     }
 
@@ -460,7 +486,8 @@ public class ExamplesMain {
         // snips-start: any_error
         // From a string
         final AnyError a = AnyError.from("something went wrong");
-        final AnyError b = AnyError.from("code %d not found", 404);
+        final AnyError b = AnyError.from("code %d, '%s' not found",
+                404, "client_requested_file");
 
         // From an exception
         final AnyError c = AnyError.from(new NumberFormatException("not a number"));
@@ -471,6 +498,35 @@ public class ExamplesMain {
 
         // Turn any AnyError into an Err Result
         final Result<String> fail = a.fail();
+
+        if (c instanceof AnyError.ExceptionError<?> x) {
+            x.error().printStackTrace();
+        } else if (c instanceof AnyError.EnumError<?> e
+                && e.error() instanceof DomainError de) {
+            de.doDomainSpecificLogging();
+        } else {
+            System.err.println(c.message());
+        }
+        // Only possible with Java21+ or 17 with preview-enabled
+        switch (c) {
+            case AnyError.ExceptionError<?> x -> x.error().printStackTrace();
+            case AnyError.EnumError<?> e -> {
+                if (e.error() instanceof DomainError de) {
+                    de.doDomainSpecificLogging();
+                } else {
+                    System.err.println(e.message());
+                }
+            }
+            default -> System.err.println(c.message());
+        }
+        /* // Only possible with Java21+
+        switch (c) {
+            case AnyError.ExceptionError<?> x -> x.error().printStackTrace();
+            case AnyError.EnumError<?> e when e.error() instanceof DomainError de ->
+                    de.doDomainSpecificLogging();
+            default -> System.err.println(c.message());
+        }
+        */
         // snips-end: any_error
     }
 

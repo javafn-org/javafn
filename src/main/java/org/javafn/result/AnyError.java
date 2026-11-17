@@ -69,8 +69,20 @@ public interface AnyError {
 	}
 
 	/** Turn this AnyError into an Err Result */
-	default <T> @NonNull Result<T> fail() {
+	default <T> @NonNull Result.Err<T> fail() {
 		return Result.err(this);
+	}
+	default @NonNull IntResult.Err failInt() {
+		return IntResult.err(this);
+	}
+	default @NonNull LongResult.Err failLong() {
+		return LongResult.err(this);
+	}
+	default @NonNull DoubleResult.Err failDouble() {
+		return DoubleResult.err(this);
+	}
+	default @NonNull VoidResult.Err failVoid() {
+		return VoidResult.err(this);
 	}
 
 	/* *******************************************************************************/
@@ -120,9 +132,6 @@ public interface AnyError {
 	}
 	/* *******************************************************************************/
 
-	static @NonNull AnyError from(@NonNull final String errorMessage) {
-		return new StringError(errorMessage);
-	}
 	static @NonNull AnyError from(@NonNull @PrintFormat final String errorMessage, final Object... args) {
 		return new StringError(errorMessage, args);
 	}
@@ -134,6 +143,7 @@ public interface AnyError {
 		final Class<E> type = (Class<E>) e.getClass();
 		return new ExceptionError<>(e, type, Optional.empty());
 	}
+	@Deprecated(forRemoval = true)
 	static <E extends Exception> @NonNull AnyError from(@NonNull final E e, @Nullable final String msgPrefix) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
@@ -144,6 +154,7 @@ public interface AnyError {
 		final Class<E> type = (Class<E>) e.getClass();
 		return new EnumError<>(e, type, Optional.empty());
 	}
+	@Deprecated(forRemoval = true)
 	static <E extends Enum<E>> @NonNull AnyError from(@NonNull final E e, @Nullable final String msgDetails) {
 		@SuppressWarnings("unchecked")
 		final Class<E> type = (Class<E>) e.getClass();
@@ -206,6 +217,7 @@ public interface AnyError {
 	record ExceptionError<E extends Exception>(
 			@NonNull E error,
 			@NonNull Class<E> type,
+			@Deprecated(forRemoval = true)
 			@NonNull Optional<String> msgPrefix
 	) implements AnyError {
 		@SuppressWarnings("unchecked")
@@ -232,6 +244,7 @@ public interface AnyError {
 	record EnumError<E extends Enum<E>>(
 			@NonNull E error,
 			@NonNull Class<E> type,
+			@Deprecated(forRemoval = true)
 			@NonNull Optional<String> msgDetails
 	) implements AnyError {
 		@Override public @NonNull String message() { return error.name() + msgDetails().map(s -> ": " + s).orElse(""); }

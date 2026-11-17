@@ -5,7 +5,7 @@ import edu.umd.cs.findbugs.annotations.NonNull;
 /**
  * Any of the result implementations wraping an error value,
  * obtained by calling e.g., {@link Result#err(AnyError)}.
- * To access {@link Result.Err#value}, You should obtain an Err by doing an instanceof check
+ * To access {@link Result.Err#value()}, You should obtain an Err by doing an instanceof check
  * <pre>{@code
  * final Result<String> res = ...
  * if (res instanceof Err<?> e) {
