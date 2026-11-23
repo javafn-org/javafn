@@ -93,10 +93,6 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
     static <OK> @NonNull Err<OK> err(@NonNull final AnyError err) {
         return new Err<>(err);
     }
-    /** Create a new Result wrapping an error message. */
-    static <OK> @NonNull Err<OK> err(@NonNull final String errorMessage) {
-        return new Err<>(AnyError.from(errorMessage));
-    }
     static <OK> @NonNull Err<OK> err(@NonNull @PrintFormat final String errorMessage, final Object... args) {
         return new Err<>(AnyError.from(errorMessage, args));
     }
@@ -114,6 +110,10 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
     @Deprecated(forRemoval = true)
     static <E extends Enum<E>, OK> @NonNull Err<OK> err(@NonNull final E e, @Nullable final String errorMessage) {
         return new Err<>(AnyError.from(e, errorMessage));
+    }
+
+    static <OK> @NonNull Result<OK> ofNullable(@Nullable final OK maybeNull, @NonNull @PrintFormat final String errorMessage, final Object... args) {
+        return maybeNull == null ? err(errorMessage, args) : ok(maybeNull);
     }
 
     @Override default Result<OK> res() { return this; }
