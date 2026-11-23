@@ -91,6 +91,7 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
     @Override default @NonNull VoidResult mapErr(@NonNull Function<AnyError, AnyError> fn) {
         return this;
     }
+    @Override default @NonNull VoidResult withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) { return this; }
 
     /**
      * Apply the mapping function to the ok value if this is an Ok, otherwise return this
@@ -230,6 +231,9 @@ public sealed interface VoidResult extends AnyResult<VoidResult.Unit, VoidResult
         @Override public Result<Unit> boxed() { return Result.err(value); }
 
         @Override public @NonNull VoidResult mapErr(@NonNull final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
+        @Override public @NonNull VoidResult withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
+            return err(value.withContext(msgFormat, args));
+        }
 
         @Override public boolean filterErr(@NonNull final Predicate<AnyError> fn) { return fn.test(value); }
 

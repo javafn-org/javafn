@@ -162,6 +162,7 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
     <NEWOK> @NonNull Result<NEWOK> map(@NonNull Function<AnyError, AnyError> fnErr, @NonNull Function<OK, NEWOK> fnOk);
 
     @Override default @NonNull Result<OK> mapErr(@NonNull Function<AnyError, AnyError> fn) { return this; }
+    @Override default @NonNull Result<OK> withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) { return this; }
 
     /**
      * Apply the mapping function to the ok value if this is an Ok, otherwise return this
@@ -321,9 +322,6 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
         public @NonNull Exception except() { return value.except(); }
         public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
         public @NonNull Err<OK> join(final @NonNull AnyError that) { return err(value.join(that)); }
-        public @NonNull Err<OK> withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
-            return err(value.withContext(msgFormat, args));
-        }
 
         public <Z> @NonNull Err<Z> into() { return err(value); }
 
@@ -348,6 +346,9 @@ public sealed interface Result<OK> extends AnyResult<OK, Result<OK>> permits Res
         @Override public @NonNull DoubleResult mapToDouble(@NonNull final ToDoubleFunction<OK> fn) { return DoubleResult.err(value); }
 
         @Override public @NonNull Result<OK> mapErr(@NonNull final Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
+        @Override public @NonNull Result<OK> withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
+            return err(value.withContext(msgFormat, args));
+        }
 
         @Override public boolean filterErr(@NonNull final Predicate<AnyError> fn) { return fn.test(value); }
 

@@ -1,6 +1,7 @@
 package org.javafn.result;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import org.intellij.lang.annotations.PrintFormat;
 
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -131,6 +132,12 @@ public interface AnyResult<OK, THIS extends AnyResult<OK, THIS>> {
      * @return a new result with the error mapped or this unmodified if this is an ok
      */
     @NonNull THIS mapErr(@NonNull Function<AnyError, AnyError> fn);
+
+    /**
+     * If this is an err, perform the equivalent of <pre>{@code res.mapErr(e -> e.withContext(msgFormat, args))}</pre>,
+     * and if not an err, return unmodified.
+     */
+    @NonNull THIS withContext(@NonNull @PrintFormat String msgFormat, Object... args);
 
     /**
      * Apply the supplied consumer to the wrapped err value, or if this is an ok, perform no operation.

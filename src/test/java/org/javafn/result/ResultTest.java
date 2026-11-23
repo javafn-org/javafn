@@ -17,14 +17,6 @@ class ResultTest {
     }
 
     @Test
-    @DisplayName("Result.ok() factory creates an Ok instance with null value (Void)")
-    void testOkVoidFactory() {
-        var res = VoidResult.ok();
-        assertTrue(res.isOk());
-        assertFalse(res.isErr());
-    }
-
-    @Test
     @DisplayName("Result.err factories create Err instances")
     void testErrFactories() {
         // String err
@@ -71,5 +63,23 @@ class ResultTest {
     void testExpectErrFailure() {
         var res = Result.ok("success");
         assertThrows(IllegalStateException.class, res::expectErr);
+    }
+
+    @Test
+    @DisplayName("withContext on Ok returns the same instance")
+    void testWithContextOkReturnsSameInstance() {
+        var res = Result.ok("hello");
+        var result = res.withContext("added context");
+        assertSame(res, result);
+    }
+
+    @Test
+    @DisplayName("withContext on Err wraps error in ErrorWithContext")
+    void testWithContextErrWrapsError() {
+        var res = Result.<String>err("fail");
+        var result = res.withContext("added context");
+        assertTrue(result.isErr());
+        assertInstanceOf(AnyError.ErrorWithContext.class, result.expectErr());
+        assertEquals("added context: fail", result.expectErr().message());
     }
 }

@@ -106,6 +106,7 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
     LongResult map(Function<AnyError, AnyError> fnErr, LongUnaryOperator fnOk);
 
     @Override default @NotNull LongResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return this; }
+    @Override default @NonNull LongResult withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) { return this; }
 
     /**
      * Apply the mapping function to the ok value if this is an Ok, otherwise return this
@@ -243,9 +244,6 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
         public @NonNull Exception except() { return value.except(); }
         public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
         public @NonNull Err join(final @NonNull AnyError that) { return err(value.join(that)); }
-        public @NonNull Err withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
-            return err(value.withContext(msgFormat, args));
-        }
 
         public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
         public @NonNull IntResult.Err intoInt() { return IntResult.err(value); }
@@ -267,6 +265,9 @@ public sealed interface LongResult extends AnyResult<Long, LongResult> permits L
         @Override public Result<Long> boxed() { return Result.err(value); }
 
         @Override public @NotNull LongResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
+        @Override public @NonNull LongResult withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
+            return err(value.withContext(msgFormat, args));
+        }
 
         @Override public boolean filterErr(final @NotNull Predicate<AnyError> fn) { return fn.test(value); }
 

@@ -64,4 +64,22 @@ class DoubleResultTest {
         var res = DoubleResult.ok(123.4);
         assertThrows(IllegalStateException.class, res::expectErr);
     }
+
+    @Test
+    @DisplayName("withContext on Ok returns the same instance")
+    void testWithContextOkReturnsSameInstance() {
+        var res = DoubleResult.ok(123.4);
+        var result = res.withContext("added context");
+        assertSame(res, result);
+    }
+
+    @Test
+    @DisplayName("withContext on Err wraps error in ErrorWithContext")
+    void testWithContextErrWrapsError() {
+        var res = DoubleResult.err("fail");
+        var result = res.withContext("added context");
+        assertTrue(result.isErr());
+        assertInstanceOf(AnyError.ErrorWithContext.class, result.expectErr());
+        assertEquals("added context: fail", result.expectErr().message());
+    }
 }

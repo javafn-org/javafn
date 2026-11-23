@@ -105,6 +105,7 @@ public sealed interface IntResult extends AnyResult<Integer, IntResult> permits 
      IntResult map(Function<AnyError, AnyError> fnErr, IntUnaryOperator fnOk);
 
     @Override default @NotNull IntResult mapErr(final @NotNull Function<AnyError, AnyError> fn) { return this; }
+    @Override default @NotNull IntResult withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) { return this; }
 
     /**
      * Apply the mapping function to the ok value if this is an Ok, otherwise return this
@@ -250,9 +251,6 @@ public sealed interface IntResult extends AnyResult<Integer, IntResult> permits 
         public @NonNull Exception except() { return value.except(); }
         public @NonNull RuntimeException exceptUnchecked() { return value.exceptUnchecked(); }
         public @NonNull Err join(final @NonNull AnyError that) { return err(value.join(that)); }
-        public @NonNull Err withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
-            return err(value.withContext(msgFormat, args));
-        }
 
         public <Z> @NonNull Result.Err<Z> into() { return Result.err(value); }
         public @NonNull Err intoInt() { return this; }
@@ -275,6 +273,9 @@ public sealed interface IntResult extends AnyResult<Integer, IntResult> permits 
         @Override public Result<Integer> boxed() { return Result.err(value); }
 
         @Override public @NotNull IntResult mapErr(final @NonNull Function<AnyError, AnyError> fn) { return err(fn.apply(value)); }
+        @Override public @NotNull IntResult withContext(final @NonNull @PrintFormat String msgFormat, final Object... args) {
+            return err(value.withContext(msgFormat, args));
+        }
 
         @Override public boolean filterErr(final @NotNull Predicate<AnyError> fn) { return fn.test(value); }
 

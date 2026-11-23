@@ -3,7 +3,7 @@ package org.javafn.result;
 import edu.umd.cs.findbugs.annotations.NonNull;
 
 /**
- * Any of the result implementations wraping an error value,
+ * Any of the result implementations wrapping an error value,
  * obtained by calling e.g., {@link Result#err(AnyError)}.
  * To access {@link Result.Err#value()}, You should obtain an Err by doing an instanceof check
  * <pre>{@code
